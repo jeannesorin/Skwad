@@ -26,13 +26,13 @@ The README is meant to be a living document that (i) describes the file structur
 3. If there are, pull the most up to date repository `git pull`.
 4. Open a new branch to begin working locally on a project `git checkout -b branch_name`.
 5. After working for a few hours, you would like to add your new files to the the online master repository. So you,
-..1. Clean up your branch such that you don't have files that you don't want to be uploaded.
-  2.. Make sure your master is up to date by `git pull`.
-  3.. Go to the local master branch `git branch master`.
-  4.. Merge this with your branch `git merge branch_name`.
-  5.. Add these changes `git add .`
-  6.. Commit this changes and give detailed comments `commit -m "George is a tosser"` (see [here](https://nexter.org/wp-content/uploads/2019/07/weird-stock-images-photos-funny-pic.jpg) form more details)
-  7.. Push these changes to git hub `git push`.
+    1. Clean up your branch such that you don't have files that you don't want to be uploaded.
+    2. Make sure your master is up to date by `git pull`.    
+    3. Go to the local master branch `git branch master`.
+    4. Merge this with your branch `git merge branch_name`.
+    5. Add these changes `git add .`
+    6. Commit this changes and give detailed comments `commit -m "George is a tosser"` (see [here](https://nexter.org/wp-content/uploads/2019/07/weird-stock-images-photos-funny-pic.jpg) form more details)
+    7. Push these changes to git hub `git push`.
 
 <a name="Using-Git"></a>
 ## Using Git<a name="clone-gitt"></a>
@@ -47,9 +47,9 @@ The README is meant to be a living document that (i) describes the file structur
 ### Pulling, committing and pushing
 1. To pull the most up-to-date master repository type `git pull'.
 2. After making relevant changes add the files you would like to be committed.
- ⋅⋅1. If you would like to add specific files type,
+    1. If you would like to add specific files type,
 `git add <filenames>`.
-⋅⋅2. If you would like all changes to be committed type,
+    2. If you would like all changes to be committed type,
 `git add .`.
 3. To commit these changes to your local git type,
 `git commit -m "comment"`.
