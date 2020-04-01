@@ -25,14 +25,14 @@ The README is meant to be a living document that (i) describes the file structur
 2. Check if there are any updates to the master directory online `git status`.
 3. If there are, pull the most up to date repository `git pull`.
 4. Open a new branch to begin working locally on a project `git checkout -b branch_name`.
-5. After working for a few hours, you would like to add your new files to the the online master repository. So you,
-    1. Clean up your branch such that you don't have files that you don't want to be uploaded.
+5. After working for a few hours, you may like to add your new files to the the online master repository. So you,
+    1. Clean your branch such that there are no files that you don't want uploaded.
     2. Make sure your master is up to date by `git pull`.    
     3. Go to the local master branch `git branch master`.
-    4. Merge this with your branch `git merge branch_name`.
+    4. Merge this with your cleaned up branch `git merge branch_name`.
     5. Add these changes `git add .`
-    6. Commit this changes and give detailed comments `commit -m "George is a tosser"` (see [here](https://nexter.org/wp-content/uploads/2019/07/weird-stock-images-photos-funny-pic.jpg) form more details)
-    7. Push these changes to git hub `git push`.
+    6. Commit these changes to your local git and provide detailed comments `commit -m "George is a tosser"` (see [here](https://nexter.org/wp-content/uploads/2019/07/weird-stock-images-photos-funny-pic.jpg) form more details)
+    7. Push these changes to our central repository on git hub `git push`.
 
 <a name="Using-Git"></a>
 ## Using Git<a name="clone-gitt"></a>
