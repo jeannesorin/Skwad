@@ -9,7 +9,7 @@ This README is a living document that (i) describes the file structure; (ii) set
 * [ Using Git ](#Using-Git)
   * [ Cloning Repository ](#clone-git)
   * [ Pulling, committing and pushing ](#git-commit)
-  * [ Branching ](#branching)
+  * [ Branch basics ](#branching)
   * [ Other Useful Git Resources ](#git-resources)
  
 <a name="best-practice"></a>
@@ -56,7 +56,7 @@ This README is a living document that (i) describes the file structure; (ii) set
 4. To push these new changes to the shared git hub repository type,
 `git push`.
 <a name="branching"></a>
-### Branches Basics
+### Branch basics
 * To see the list of branches in your git and which branch you are currently on type `git branch`
 * To create a new branch type `git branch <branch name>`. Alternatively, to create a new branch and jump to it type `git checkout -b <branch name>`.
 * To jump to specific branch type `git checkout <branchname>`
