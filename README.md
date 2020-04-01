@@ -5,7 +5,7 @@ The README is meant to be a living document that (i) describes the file structur
 
 **README Contents:**
 * [ Best Practice ](#best-practice)
-* [ Best Practice ](#workflow)
+* [ Typical Workflow ](#workflow)
 * [ Using Git ](#Using-Git)
   * [ Cloning Repository ](#clone-git)
   * [ Pulling, committing and pushing ](#git-commit)
