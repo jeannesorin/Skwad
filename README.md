@@ -1,5 +1,5 @@
 # Skwad
-*Before anything else make sure have have installed git on your local device, set-up a git hub account, and request and accepted editting permission from Jennifer.*
+*Before anything else make sure have have installed git on your local device, set-up a git hub account, and requested and accepted editting permission from Jennifer.*
 
 The README is meant to be a living document that (i) describes the file structure, (ii) best practices on how to contribute to and use this repository, and (iii) general tips and tricks on getting the most out of this ecosystem.
 
