@@ -31,7 +31,7 @@ This README is a living document that (i) describes the file structure; (ii) set
     3. Go to the local master branch `git branch master`.
     4. Merge this with your cleaned up branch `git merge branch_name`.
     5. Add these changes `git add .`
-    6. Commit these changes to your local git and provide detailed comments `commit -m "George is a tosser"` (see [here](https://nexter.org/wp-content/uploads/2019/07/weird-stock-images-photos-funny-pic.jpg) form more details)
+    6. Commit these changes to your local git and provide detailed comments `git commit -m "George is a tosser"` (see [here](https://nexter.org/wp-content/uploads/2019/07/weird-stock-images-photos-funny-pic.jpg) form more details)
     7. Push these changes to our central repository on git hub `git push`.
 
 <a name="Using-Git"></a>
