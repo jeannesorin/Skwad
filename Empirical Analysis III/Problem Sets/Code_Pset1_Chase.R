@@ -72,7 +72,18 @@ print(var(U[,1]))
 
 # Problem 3
 
+# Setup
+X1 = rep(1, len=10000)
+X2 = c(-4999:5000)
+X = matrix(c(X1, X2), ncol=2)
+beta = c(2,3)
+mysigma = 2
+U = rnorm(n = 10000, mean = 0, sd = sigma)
+Y = X%*%beta + U
 
+betahat <- solve(t(X)%*%X)%*%t(X)%*%Y
+
+# make functions for everything, since will need to be repeated later
 
 
 
