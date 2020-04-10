@@ -44,7 +44,7 @@ library(MASS)
 
 # Define functions
 # Compute yi : the observed outcome at the individual level
-compute_yi <- function(x){
+compute_yi <- function(x, N){
   yi <- replicate(N, 0)
   di <- replicate(N,0)
   for (i in 1:N){
@@ -76,7 +76,7 @@ parameters <- function(dataset){
   }
 
 
-routine <- function(s, r, N, print=TRUE, ret=FALSE){
+routine <- function(s, r, N=10000, print=TRUE, ret=FALSE){
   s <- s
   r <- r
   N <- N
@@ -88,7 +88,7 @@ routine <- function(s, r, N, print=TRUE, ret=FALSE){
   
   # Simulate the multivariate normal and create a dataset
   x <-  mvrnorm(n=N, mu, Sigma)
-  Yi_output <- compute_yi(x)
+  Yi_output <- compute_yi(x, N)
   Yi <- Yi_output$yi
   Di <- Yi_output$Di
   dataset <- data.frame(y1 = x[,1],
