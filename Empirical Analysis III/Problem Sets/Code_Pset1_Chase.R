@@ -8,13 +8,12 @@
 # install.packages("mvtnorm");
 library(mvtnorm)
 
-
 # Problem 2
 
 # Parameters
-sigma = 2
+sigma = 0.75
 rho = 0.5
-N = 10000
+N = 100000
 
 # "true" results
 trueATE = 0
@@ -72,19 +71,102 @@ print(var(U[,1]))
 
 # Problem 3
 
+# Monte Carlo
+
+# a)
+
 # Setup
-X1 = rep(1, len=10000)
-X2 = c(-4999:5000)
+N = 10000
+X1 = rep(1, len=N)
+X2 = rnorm(n=N, mean = 0, sd = 10)
+# X2 = c(-4999:5000)
 X = matrix(c(X1, X2), ncol=2)
 beta = c(2,3)
-mysigma = 2
-U = rnorm(n = 10000, mean = 0, sd = sigma)
+sigma = 2
+U = rnorm(n = N, mean = 0, sd = sigma)
 Y = X%*%beta + U
 
-betahat <- solve(t(X)%*%X)%*%t(X)%*%Y
+betahat <- function(X,Y) {
+  return(solve(t(X)%*%X)%*%t(X)%*%Y)
+}
 
-# make functions for everything, since will need to be repeated later
+mybetahat <- betahat(X,Y)
 
+# Uses homoskedasticity
+Vhat <- function(X,Y) {
+   return(solve(1/length(Y)*t(X)%*%X)*mean((Y-X%*%betahat(X,Y))^2))
+}
+
+myVhat <- Vhat(X,Y)
+
+se <- function(X,Y) {
+  return(sqrt(1/length(Y)*diag(Vhat(X,Y))))
+}
+
+myse <- se(X,Y)
+
+# b)
+
+sees <- function(bs) {
+  return(sqrt(rowMeans(bs^2) - rowMeans(bs)^2))
+}
+
+S = 10
+
+betas = matrix(, nrow = 2, ncol = 0)
+
+for(s in 1:S) {
+  Us <- rnorm(n = N, mean = 0, sd = sigma)
+  Ys <- X%*%beta + Us
+  betas <- cbind(betas, betahat(X,Ys))
+}
+
+mysees <- sees(betas)
+
+hist(betas[2,])
+
+# Nonparametric bootstrap
+
+# a)
+
+N = 10000
+
+U1 <- rnorm(n=N, mean = 0, sd = 1)
+U2 <- rnorm(n=N, mean = 0, sd = 1)
+D <- rbinom(n=N,1,0.5)
+augD <- matrix(c(rep(1,len=N), D), ncol = 2)
+Y1 <- 5 + U1
+Y0 <- 2 + U2
+Y <- Y0 + D*(Y1 - Y0)
+nbbetahat <- betahat(augD,Y)
+nbse <- se(augD, Y)
+
+# b)
+
+
+bootsamp <- function(X,Y,N) {
+  indices <- ceiling(runif(N,0,length(Y)))
+  Xsamp <- X[indices,]
+  Ysamp <- Y[indices]
+  return(matrix(c(Xsamp,Ysamp), ncol=ncol(X)+1))
+}
+
+bootsamp(augD,Y,N)
+
+S <- 10
+
+nbbetas = matrix(, nrow = 2, ncol = 0)
+
+for(s in 1:S) {
+  samp <- bootsamp(augD,Y,N)
+  Ds <- samp[,1:2]
+  Ys <- samp[,3]
+  nbbetas <- cbind(nbbetas, betahat(Ds,Ys))
+}
+
+nbsees <- sees(nbbetas)
+
+hist(nbbetas[2,])
 
 
 
