@@ -157,28 +157,29 @@ draw_u <- function(N, sigma, mean=0){ #Generate error u
   return(u = mvrnorm(n=N, mean, sigma))
 }
 compute_y <- function(x, beta, u){ # Compute resulting u
-  return(y = dot(t(x), beta) + u)
+  return(y = x %*% beta + u)
 }
-
+compute_beta <- function(x, y){
+  return(beta_hat = solve(t(x) %*% x) %*% (t(x) %*% y))
+}
+compute_beta_std <- function(x, y){
+  vhat = solve(1/length(Y)*t(X)%*%X)*mean((Y-X%*%betahat(X,Y))^2)
+  return(std = sqrt(1/length(y)*diag(Vhat(x,y))))
+}
+  
+  
 ### Draw data
 x = draw_x(N, beta[1])
 u = draw_u(N, sigma)
 y = compute_y(x, beta, u)
 
 ### Estimate beta and its standard errors
-  # y = x*beta + ui
-  # x'y = x'x*beta + x'ui
-  # E(x'y) = E(x'x)*beta + E(x'ui) = E(x'x)*beta
-  # E(x'x)^{-1} E(x'y) = beta_hat
-beta_hat = solve(t(x) %*% x) %*% (t(x) %*% y)
+beta_hat = compute_beta(x, y)
+beta_hat_std = compute_beta_std(x, y)
 
-#num = var(dot(u, x))
-beta_hat_std = (1/(N^0.5))*mean(y*y)
+beta_hat
+beta_hat_std
 
-#beta_hat_std = (mean()*solve(var(t(x) %*% x)))^0.5
-# Check using OLS
-regression <- lm(y ~ x + 0)
-#regression
 
 
 
@@ -194,21 +195,20 @@ make_monte_carlo<- function(S, x, beta, sigma, plot=TRUE, ret=FALSE){
   for (s in 1:S){
     us = draw_u(dim(x)[1], sigma)
     ys = compute_y(x, beta, us)
-    beta_hats[s,] = t(solve(t(x) %*% x) %*% (t(x) %*% ys))
+    beta_hats[s,] = compute_beta(x, ys)
   }
   # Plot histogram of the first component of beta_hats
   if (plot==TRUE){hist(beta_hats[,1], breaks=100)}
   
   # Compute empirical std_dev of beta_hats
-  sum = ((1/S)*colSums(beta_hats))^2
-  std = ((1/S)*colSums(beta_hats*beta_hats) - sum)^0.5
+  std = sqrt(colMeans(beta_hats^2) - colMeans(beta_hats)^2)
+  
   print(paste("The standard deviation of beta_hat[1] from MC is ", std[1]))
   print(paste("The standard deviation of beta_hat[2] from MC is ", std[2]))
   
   # Return beta_hats vector (option)
   if (ret==TRUE){return(beta_hats)}
 }
-
 
 make_monte_carlo(10000, x, beta, sigma, plot=TRUE)
 # [1] "The standard deviation of beta_hat[1] from MC is  0.0143377288638622"
@@ -231,28 +231,18 @@ N = 10000
 
 ### Data generating process
 u = draw_u(N,mean=c(0,0), sigma = matrix(c(1, 0, 0, 1), 2, 2))
-y = u
-y[,1] = y[,1] + 5                   # Potential outcome y1
-y[,2] = y[,2] + 2                   # Potential outcome y0
-D = rbinom(N, size=1, prob=0.5)     # Randomly assigned treatment
-Y = y[,1] + D*(y[,2] - y[,1])       # Observed Y
-dataset_boot = data.frame(Y = Y, y0 = y[,1], y1 = y[,2], D = D) #In a dataframe because easier to work with
+y1 = u[,1] + 5                   # Potential outcome y1
+y0 = u[,2] + 2                   # Potential outcome y0
+D = rbinom(N, size=1, prob=0.5)  # Randomly assigned treatment
+Y = y0 + D*(y1 - y0)             # Observed Y
+D = matrix(c(rep(1, N), D), ncol = 2)   # Add a constant
 
-### Estimate beta and std deviation
-reg = lm(Y ~ D)
-std = ((1/(N-2))*sum(reg$residuals*reg$residuals))
-print(paste("Beta[1] estimated from OLS is ", reg$coefficients[1]))
-print(paste("Beta[2] estimated from OLS is ", reg$coefficients[2]))
-print(paste("The estimated standard deviation of beta is ", std))
+### Compute
+compute_beta(D, Y)
+compute_beta_std(D, Y)
 
-# V(beta) = V((beta*D + ui)*D) / V(D^22)
-# V(beta) = V(beta) + V(ui*D)/ V(D) because D = D^2
-# V(beta) = V(ui*D)/ V(D)
-dataset_boot$u = reg$residuals
-var_beta = var(dataset_boot$u*dataset_boot$D)/var(dataset_boot$D) # = (mean((ui*D)^2) - mean(ui*D)^2) / (0.25)
-std_beta = var_beta^0.5
 
-# Argue that OLS gives consistent estimates of beta
+
 
 
 
@@ -261,66 +251,48 @@ std_beta = var_beta^0.5
 # PART b
 ########
 
-pick_replacement <- function(N, dataset_original){ # Function that randomly picks N observations out of an initial dataset
-  # Initiate dataset
-  final = data.frame(Y = double(),
-                     y0 = double(),
-                     y1 = double(),
-                     D = integer(),
-                     u = double())
-  # Add N picks from the original dataset
-  print("Picking all N observations NOW")
-  for (i in 1:N){final = rbind(final, dataset_original[sample(nrow(dataset_original), 1), ])}
-  # Return final dataset
-  return(final)
+pick_replacement <- function(N, X, Y){ # Function that randomly picks N observations out of an initial dataset
+  indices <- ceiling(runif(N,0,length(Y)))
+  Xs <- X[indices,]
+  Ys <- Y[indices]
+  return(matrix(c(Xs,Ys), ncol=ncol(X)+1))
 }
 
-N = 100
-S = 100
-bootstrap_function = function(N, S, dataset_original){
-  list_datasets = list()
-  for (s in 1:S){
-    print(paste("S is ", s))
-    final =  pick_replacement(N, dataset_boot)
-    list_datasets = list.append(list_datasets, final)
-  }
-  return(list_datasets)
-}
-
-bootstrap_monte <- function(final, S, plot=TRUE, ret=FALSE){
-  
-  # Pick with replacement N observations, S times
-  final = bootstrap_function(N, S, dataset_boot)
-  
-  # Initiate vector of betas
+bootstrap_function = function(N, S, Y, X){
   beta_hats = matrix(replicate(S*2,0), S)
   
-  # For each s, combute beta_hat
-  for (i in 1:S){
-    print(paste("S is ", i))
-    data_sub = data.frame(final[i])
-    reg = lm(Y ~ D, data_sub)
-    beta_hats[i,] = reg$coefficients
+  for (s in 1:S){
+    data <- pick_replacement(N, D, Y)
+    Ds <- data[,1:2]
+    Ys <- data[,3]
+    beta_hats[s,] <- compute_beta(Ds, Ys)
   }
+  return(beta_hats)
+}
+
+bootstrap_monte <- function(S, N, Y, X, plot=TRUE, ret=FALSE){
   
-  # Compute standard deviation
-  sum = ((1/S)*colSums(beta_hats))^2
-  std = ((1/S)*colSums(beta_hats*beta_hats) - sum)^0.5
-  print(paste("The standard deviation of beta_hat[1] from MC is ", std[1]))
-  print(paste("The standard deviation of beta_hat[2] from MC is ", std[2]))
+  betas = bootstrap_function(N, S, Y, X)
+
+  vhat = (1/N)*colSums(betas^2) - ((1/N)*colSums(betas))^2
+  betas_std = sqrt((1/N)*diag(vhat))
+  
+  print(paste("The standard deviation of beta_hat[1] from MC is ", betas_std[1,1]))
+  print(paste("The standard deviation of beta_hat[2] from MC is ", betas_std[2,2]))
   
   # Plot histogram
   if (plot==TRUE){
-    hist(beta_hats[,1])
+    hist(betas[,1], breaks=100)
+    hist(betas[,2], breaks=100)
   }
   
   # Bonus: you can even get the vector of beta_hats
   if (ret==TRUE){
-    return(beta_hats)
+    return(betas)
   }
 }
 
-
-
-bootstrap_monte(final, S)
+N = 10000
+S = 10000
+bootstrap_monte(S, N, Y, X)
 
