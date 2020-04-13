@@ -70,7 +70,7 @@ betaOLS <- mean(tr[,2]) - mean(ut[,1])
 # a)
 
 # Setup
-N = 10000
+N = 10
 X1 = rep(1, len=N)
 X2 = rnorm(n=N, mean = 0, sd = 10)
 # X2 = c(-4999:5000)
@@ -147,7 +147,7 @@ bootsamp <- function(X,Y,N) {
 
 bootsamp(augD,Y,N)
 
-S <- 10
+S <- 10000
 
 nbbetas = matrix(, nrow = 2, ncol = 0)
 
@@ -160,7 +160,25 @@ for(s in 1:S) {
 
 nbsees <- sees(nbbetas)
 
+hist(nbbetas[1,])
 hist(nbbetas[2,])
+
+# draw D and Y independnetly
+# S <- 10
+# 
+# inbbetas = matrix(, nrow = 2, ncol = 0)
+# 
+# for(s in 1:S) {
+#   samp1 <- bootsamp(augD,Y,N)
+#   samp2 <- bootsamp(augD,Y,N)
+#   Ds <- samp1[,1:2]
+#   Ys <- samp2[,3]
+#   inbbetas <- cbind(inbbetas, betahat(Ds,Ys))
+# }
+# 
+# inbsees <- sees(inbbetas)
+# 
+# hist(inbbetas[2,])
 
 
 
