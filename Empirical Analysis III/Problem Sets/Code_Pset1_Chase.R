@@ -23,6 +23,7 @@ trueATUT = -trueATT
 
 # Generate data
 mymean = c(0,0)
+# Note I generate (U_0, U_1), NOT (U_1, U_0)
 mysigma = matrix(c(1, rho*sigma, rho*sigma, sigma^2), ncol = 2)
 U <- rmvnorm(n=N, mean=mymean, sigma = mysigma)
 
@@ -59,13 +60,6 @@ ATE <- mean(U[,2] - U[,1])
 ATT <- mean(tr[,2] - tr[,1])
 ATUT <- mean(ut[,2] - ut[,1])
 betaOLS <- mean(tr[,2]) - mean(ut[,1])
-
-print(sqrt((1-2*rho*sigma + sigma^2)*2/pi))
-print(mean(tr[,1]))
-print(mean(tr[,2]))
-print(mean(ut[,1]))
-print(mean(ut[,2]))
-print(var(U[,1]))
 
 #########################
 
