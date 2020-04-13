@@ -154,7 +154,7 @@ draw_x <- function(N, b=1){ #Generate bivariate X
   return(x = mvrnorm(n=N, c(b, 0), matrix(c(0,0,0,100), 2, 2)))
 }
 draw_u <- function(N, sigma, mean=0){ #Generate error u
-  return(u = mvrnorm(n=N, mean, sigma))
+  return(u = mvrnorm(n=N, mean, sigma^2))
 }
 compute_y <- function(x, beta, u){ # Compute resulting u
   return(y = x %*% beta + u)
@@ -163,13 +163,13 @@ compute_beta <- function(x, y){
   return(beta_hat = solve(t(x) %*% x) %*% (t(x) %*% y))
 }
 compute_beta_std <- function(x, y){
-  vhat = solve(1/length(Y)*t(X)%*%X)*mean((Y-X%*%betahat(X,Y))^2)
-  return(std = sqrt(1/length(y)*diag(Vhat(x,y))))
+  vhat = solve(1/length(y)*t(x)%*%x)*mean((y-x%*%compute_beta(x,y))^2)
+  return(std = sqrt(1/length(y)*diag(vhat)))
 }
-  
+
   
 ### Draw data
-x = draw_x(N, beta[1])
+x = draw_x(N)
 u = draw_u(N, sigma)
 y = compute_y(x, beta, u)
 
@@ -200,11 +200,12 @@ make_monte_carlo<- function(S, x, beta, sigma, plot=TRUE, ret=FALSE){
   # Plot histogram of the first component of beta_hats
   if (plot==TRUE){hist(beta_hats[,1], breaks=100)}
   
-  # Compute empirical std_dev of beta_hats
+  # Compute empirical se of beta_hats
   std = sqrt(colMeans(beta_hats^2) - colMeans(beta_hats)^2)
   
-  print(paste("The standard deviation of beta_hat[1] from MC is ", std[1]))
-  print(paste("The standard deviation of beta_hat[2] from MC is ", std[2]))
+  
+  print(paste("The standard error of beta_hat[1] from MC is ", std[1]))
+  print(paste("The standard error of beta_hat[2] from MC is ", std[2]))
   
   # Return beta_hats vector (option)
   if (ret==TRUE){return(beta_hats)}
@@ -253,6 +254,8 @@ compute_beta_std(D, Y)
 
 pick_replacement <- function(N, X, Y){ # Function that randomly picks N observations out of an initial dataset
   indices <- ceiling(runif(N,0,length(Y)))
+  #indices2 <- ceiling(runif(N,0,length(Y)))
+  
   Xs <- X[indices,]
   Ys <- Y[indices]
   return(matrix(c(Xs,Ys), ncol=ncol(X)+1))
@@ -273,12 +276,17 @@ bootstrap_function = function(N, S, Y, X){
 bootstrap_monte <- function(S, N, Y, X, plot=TRUE, ret=FALSE){
   
   betas = bootstrap_function(N, S, Y, X)
-
-  vhat = (1/N)*colSums(betas^2) - ((1/N)*colSums(betas))^2
-  betas_std = sqrt((1/N)*diag(vhat))
+  print(median(betas[,2]))
+  print(mean(betas[,2]))
   
-  print(paste("The standard deviation of beta_hat[1] from MC is ", betas_std[1,1]))
-  print(paste("The standard deviation of beta_hat[2] from MC is ", betas_std[2,2]))
+  betas_error = sqrt(colMeans(betas^2) - colMeans(betas)^2)
+  #print(betas_error)
+  
+  #vhat = (1/N)*colSums(betas^2) - ((1/N)*colSums(betas))^2
+  #betas_std = sqrt((1/N)*diag(vhat))
+  
+  print(paste("The standard deviation of beta_hat[1] from MC is ", betas_error[1]))
+  print(paste("The standard deviation of beta_hat[2] from MC is ", betas_error[2]))
   
   # Plot histogram
   if (plot==TRUE){
@@ -294,5 +302,8 @@ bootstrap_monte <- function(S, N, Y, X, plot=TRUE, ret=FALSE){
 
 N = 10000
 S = 10000
-bootstrap_monte(S, N, Y, X)
+bootstrap_monte(S, N, Y, D)
+
+
+
 
