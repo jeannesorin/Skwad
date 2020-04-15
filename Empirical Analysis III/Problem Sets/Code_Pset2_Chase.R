@@ -22,39 +22,52 @@ nswT <- subset(nsw, treated == 1)
 nswUT <- subset(nsw, treated == 0)
 
 # demographic vars should be independent of treatment
-ols <- function(X, Y) {
-  return(solve(t(X)%*%X)%*%t(X)%*%Y)
+# ols <- function(X, Y) {
+#   return(solve(t(X)%*%X)%*%t(X)%*%Y)
+# }
+# 
+# olsindeptest <- function(X,Y) {
+#   beta = solve(t(X)%*%X)%*%t(X)%*%Y
+#   return(beta[2])
+# }
+# 
+# aug <- function(X) {
+#   return(matrix(c(rep(1,len=length(X)), X), ncol = 2))
+# }
+# 
+# re74test <- olsindeptest(aug(nsw$re74), nsw$treated)
+# agetest <- olsindeptest(aug(nsw$age), nsw$treated)
+# eductest <- olsindeptest(aug(nsw$educ), nsw$treated)
+# blacktest <- olsindeptest(aug(nsw$black), nsw$treated)
+# hisptest <- olsindeptest(aug(nsw$hisp), nsw$treated)
+# marriedtest <- olsindeptest(aug(nsw$married), nsw$treated)
+# nodegreetest <- olsindeptest(aug(nsw$nodegree), nsw$treated)
+# w76test <- olsindeptest(aug(nsw$w76), nsw$treated)
+
+vars = c("age", "educ", "black", "hisp", "married",
+         "nodegree", "re74")
+
+for(a in vars) {
+  atest <- t.test(nswT[,a], nswUT[,a])
+  cat(a, ": ", atest$p.value, "\n")
 }
 
-olsindeptest <- function(X,Y) {
-  beta = solve(t(X)%*%X)%*%t(X)%*%Y
-  return(beta[2])
-}
-
-aug <- function(X) {
-  return(matrix(c(rep(1,len=length(X)), X), ncol = 2))
-}
-
-re74test <- olsindeptest(aug(nsw$re74), nsw$treated)
-agetest <- olsindeptest(aug(nsw$age), nsw$treated)
-eductest <- olsindeptest(aug(nsw$educ), nsw$treated)
-blacktest <- olsindeptest(aug(nsw$black), nsw$treated)
-hisptest <- olsindeptest(aug(nsw$hisp), nsw$treated)
-marriedtest <- olsindeptest(aug(nsw$married), nsw$treated)
-nodegreetest <- olsindeptest(aug(nsw$nodegree), nsw$treated)
-w76test <- olsindeptest(aug(nsw$w76), nsw$treated)
+indep_lm <- glm(treated ~ age + educ + black + hisp + married +
+                nodegree + re74, data = nsw)
 
 
 # b) If treatment is random, then E[Y(1) - Y(0)] = E[Y(1) | D = 1] - E[Y(0) | D = 0]
-nswT <- subset(nsw, treated == 1)
-nswUT <- subset(nsw, treated == 0)
+# nswT <- subset(nsw, treated == 1)
+# nswUT <- subset(nsw, treated == 0)
 betaindep <- mean(nswT$re78) - mean(nswUT$re78)
-betaols <- ols(aug(nsw$treated), nsw$re78)
+# betaols <- ols(aug(nsw$treated), nsw$re78)
+
+betaols <- glm(re78 ~ treated, data = nsw)
 
 # c) 
 
 nswcps <- subset(data, (sample == 1 & treated == 1) | sample == 2)
-betanswcps <- ols(aug(nswcps$treated), nswcps$re78)
+# betanswcps <- ols(aug(nswcps$treated), nswcps$re78)
 
 # naive model only looking at treatment
 my_simple_model <- glm(re78 ~ treated, data = nswcps)
@@ -64,31 +77,55 @@ my_standard_model <- glm(re78 ~ treated + age + educ +
                            black + nodegree + re74, data = nswcps)
 
 
-
 # d)
 
+# b = 20
+
+for(a in vars) {
+  temp_nsw_a <- as.numeric(unlist(nsw[,a]))
+  nsw_hist <- hist(temp_nsw_a)
+  
+  temp_cps_a <- as.numeric(unlist(cps[,a]))
+  cps_hist <- hist(temp_cps_a,xlim = c(0,30))
+  
+  xmin <- min(temp_nsw_a,temp_cps_a)
+  ymin <- min(nsw_hist$density, cps_hist$density)
+  xmax <- max(temp_nsw_a,temp_cps_a)
+  ymax <- max(nsw_hist$density, cps_hist$density)
+  
+  plot(nsw_hist, col=rgb(0,0,1,1/4),freq = FALSE, 
+       main = c("nsw vs. cps for ",a),
+       xlab = a,
+       xlim = c(xmin,xmax), ylim = c(ymin,ymax))
+  plot(cps_hist, col=rgb(1,0,0,1/4),freq=FALSE, add=T)
+  
+}
+
+
+
+
 # Probit regression on
-prop_model <- glm(treated ~ age + educ +
-                    black + nodegree + re74, family = binomial(link = "probit"),
-                  data = nswcps)
-
-
-# prop_df <- data.frame(prop_score = predict(prop_model, 
-#                                            type = "response"),
-#                       treated = nswcps$treated)
-
-# add propensity scores to nsw + cps data rows
-prop_df <- cbind(prop_score = predict(prop_model,
-                                              type = "response"),
-                 nswcps)
-
-# subset back into treated/untreated (nsw/cps)
-prop_df_tr <- subset(prop_df, treated == 1)
-prop_df_untr <- subset(prop_df, treated == 0)
-
-# Occular inspection of propensity score support
-hist(prop_df_tr$prop_score, breaks = 100)
-hist(prop_df_untr$prop_score, breaks = 100)
+# prop_model <- glm(treated ~ age + educ +
+#                     black + nodegree + re74, family = binomial(link = "probit"),
+#                   data = nswcps)
+# 
+# 
+# # prop_df <- data.frame(prop_score = predict(prop_model, 
+# #                                            type = "response"),
+# #                       treated = nswcps$treated)
+# 
+# # add propensity scores to nsw + cps data rows
+# prop_df <- cbind(prop_score = predict(prop_model,
+#                                               type = "response"),
+#                  nswcps)
+# 
+# # subset back into treated/untreated (nsw/cps)
+# prop_df_tr <- subset(prop_df, treated == 1)
+# prop_df_untr <- subset(prop_df, treated == 0)
+# 
+# # Occular inspection of propensity score support
+# hist(prop_df_tr$prop_score, breaks = 100)
+# hist(prop_df_untr$prop_score, breaks = 100)
 
 #e)
 
