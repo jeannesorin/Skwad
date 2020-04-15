@@ -6,10 +6,11 @@ set more off
 ***Change to your path***
 
 ***George***
-global whoamI "/Users/georgevojta/Dropbox/SkwadGit"
+*global whoamI "/Users/georgevojta/Dropbox/SkwadGit"
 
 ***Manav***
-*global whoamI "Users/georgevojta/Dropbox/SwkadGit"
+global whoamI "/Users/Manav/Documents"
+
 ***Sid***
 *global whoamI "Users/georgevojta/Dropbox/SwkadGit"
 
@@ -77,6 +78,7 @@ local y_semean = round(test[1,1], .0001)
 eststo problem4a_regression: reg y cons x_2, nocons
 estadd local y_se = `y_semean'
 esttab problem4a_regression using "$output/Problem4_PartA.tex", keep(cons x_2) scalar(y_se) r2 star(* 0.10 ** 0.05 *** 0.01) replace se
+
 
 /*   
 This is going to be what we need to create the dataset
