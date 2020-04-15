@@ -112,7 +112,9 @@ data.frame(conf.int = sapply(ttest_nsw_cps, getElement, name = "conf.int"))
 lm(treated ~ ., data=(nsw_cps[,c("treated","educ", "age", "black", "married", "nodegree", "re74", "re75", "hisp", "kids18", "kidmiss")]))
 # Probit
 glm(treated ~ ., data=(nsw_cps[,c("treated","educ", "age", "black", "married", "nodegree", "re74", "re75", "hisp", "kids18", "kidmiss")]),
-    family = binomial(link = "probit"))
+    family = binomial(link = "logit"))
+
+
 
 # Investigate support visually for non-binary variables
 nsw_cps$treated = as.factor(nsw_cps$treated)
@@ -160,6 +162,13 @@ plot(match, type = 'jitter', interactive = FALSE)
 
 matched.df <- match.data(match)
 
+# Alternatively (still unsure why pr_score different than distance (not only in magnitude, also in order)...)
+model<- glm(data=matched.df,
+            treated ~ age + educ + black + married + nodegree + re74 + re75 + hisp + kids18 + kidmiss,
+            family="binomial"(link="logit"))
+matched.df$pr_score <- predict(model, matched.df, type="response")
+
+
 # Check balance again, with the matched data
 matched_ttest = lapply(matched.df[,c("educ", "age", "black", "married", "nodegree", "re74", "re75", "hisp", "kids18", "kidmiss")], function(x) t.test(x ~ matched.df$treated, var.equal = TRUE))
 data.frame(p.value = sapply(matched_ttest, getElement, name = "p.value"))
@@ -168,6 +177,8 @@ data.frame(conf.int = sapply(matched_ttest, getElement, name = "conf.int"))
 # ... to the ttest on the unmatched data.
 data.frame(conf.int = sapply(ttest_nsw_cps, getElement, name = "conf.int")) 
 # The former does much better.
+
+
 
 ### Now estimate the effect
 matched.df$treated = as.factor(matched.df$treated)
@@ -184,6 +195,7 @@ lm(re78 ~ ., data = matched.df %>% select(-c("distance", "weights")))
 
 # Simple regression
 lm(re78 ~ distance, data = matched.df)
+lm(re78 ~ pr_score, data = matched.df)
 
 # Local Linear Regression
 matched.df <- matched.df[order(matched.df$distance, matched.df$re78),]
@@ -202,8 +214,29 @@ smoothed50 <- predict(lor50)
 
 plot(matched.df[matched.df$re78<40000,]$re78, x=matched.df[matched.df$re78<40000,]$distance, type="l", main="Loess Smoothing and Prediction", xlab="Pscore", ylab="re78")
 lines(smoothed10, x=matched.df$distance, col="red")
-lines(smo othed20, x=matched.df$distance, col="green")
+lines(smoothed20, x=matched.df$distance, col="green")
 lines(smoothed50, x=matched.df$distance, col="blue")
+
+
+# Local Linear Regression with pr_score
+matched.df <- matched.df[order(matched.df$pr_score, matched.df$re78),]
+
+lor10 <- loess(re78 ~ pr_score, data=matched.df, span=0.1) # 10% smoothing span
+lor20 <- loess(re78 ~ pr_score, data=matched.df, span=0.2) # 10% smoothing span
+lor30 <- loess(re78 ~ pr_score, data=matched.df, span=0.3) # 10% smoothing span
+lor40 <- loess(re78 ~ pr_score, data=matched.df, span=0.4) # 10% smoothing span
+lor50 <- loess(re78 ~ pr_score, data=matched.df, span=0.5) # 10% smoothing span
+
+smoothed10 <- predict(lor10) 
+smoothed20 <- predict(lor20) 
+smoothed30 <- predict(lor30) 
+smoothed40 <- predict(lor40) 
+smoothed50 <- predict(lor50) 
+
+plot(matched.df[matched.df$re78<40000,]$re78, x=matched.df[matched.df$re78<40000,]$pr_score, type="l", main="Loess Smoothing and Prediction", xlab="Pscore", ylab="re78")
+lines(smoothed10, x=matched.df$pr_score, col="red")
+lines(smoothed20, x=matched.df$pr_score, col="green")
+lines(smoothed50, x=matched.df$pr_score, col="blue")
 
 
 
