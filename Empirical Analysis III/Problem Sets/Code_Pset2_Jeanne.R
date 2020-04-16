@@ -77,7 +77,7 @@ bal.tab(covs, treat = nsw$treated, stats = c("m") )
 
 
 # Alternatively (simpler approach): ttest
-ttest_nsw = lapply(nsw[,c("educ", "age", "black", "married", "nodegree", "re74", "re75", "hisp", "kids18", "kidmiss")], function(x) t.test(x ~ nsw2$treated, var.equal = TRUE))
+ttest_nsw = lapply(nsw[,c("educ", "age", "black", "married", "nodegree", "re74", "re75", "hisp", "kids18", "kidmiss")], function(x) t.test(x ~ nsw$treated, var.equal = TRUE))
 data.frame(p.value = sapply(ttest_nsw, getElement, name = "p.value"))
 data.frame(conf.int = sapply(ttest_nsw, getElement, name = "conf.int")) 
 
