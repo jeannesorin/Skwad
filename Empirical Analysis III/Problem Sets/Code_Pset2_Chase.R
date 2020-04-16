@@ -9,6 +9,7 @@ library(haven)
 library(MatchIt)
 # install.packages("dplyr")
 library(dplyr)
+set.seed(23)
 
 # Read in data, subset appropriately
 data <- read_dta(file = "lalonde2.dta")
@@ -100,7 +101,8 @@ nn_match <- matchit(treated ~ age + educ + black
                     method = "nearest",
                     data = nswcps_m,
                     distance = "probit",
-                    discard = "both")
+                    discard = "both",
+                    replace = FALSE)
 
 # summary(nn_model)
 # plot(nn_model)
@@ -143,7 +145,12 @@ hist(nn_prop_df_untr$prop_score, freq = FALSE)
 # ATT
 ATT_match <- mean(nn_prop_df_tr$re78) - mean(nn_prop_df_untr$re78)
 
-match_lm <- glm(re78 ~ treated, data = nn_prop_df)
+match_simple_lm <- glm(re78 ~ treated, data = nn_prop_df)
+
+match_standard_lm <- glm(re78 ~ treated + age + educ + black
+                         + hisp + kidmiss + kids18
+                         + married + nodegree + metro + re74,
+                         data = nn_prop_df)
 
 
 # f)
