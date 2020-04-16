@@ -39,6 +39,7 @@ indep_lm <- glm(treated ~ age + educ + black + hisp
                 + married + nodegree + metro + re74, data = nsw)
 
 
+
 # b) If treatment is random, then E[Y(1) - Y(0)] = E[Y(1) | D = 1] - E[Y(0) | D = 0]
 # estimate with above relationship
 betaindep <- mean(nswT$re78) - mean(nswUT$re78)
@@ -58,6 +59,7 @@ my_simple_model <- glm(re78 ~ treated, data = nswcps)
 my_standard_model <- glm(re78 ~ treated + age + educ + black
                          + hisp + kidmiss + kids18
                          + married + nodegree + metro + re74, data = nswcps)
+
 
 # d)
 
@@ -140,6 +142,9 @@ hist(nn_prop_df_untr$prop_score, freq = FALSE)
 
 # ATT
 ATT_match <- mean(nn_prop_df_tr$re78) - mean(nn_prop_df_untr$re78)
+
+match_lm <- glm(re78 ~ treated, data = nn_prop_df)
+
 
 # f)
 
