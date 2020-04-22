@@ -3,6 +3,7 @@ packages <- c("tidyverse", "foreign", "AER", "stargazer")
 lapply(packages, library, character.only = TRUE)
 data = as_tibble(read.dta("lottery.dta")) %>%
   mutate(lotcateg = as.factor(lotcateg),
+         year = as.factor(year),
          yd = lnw*d,
          ynd = lnw*(1-d),
          nd = 1-d)
@@ -26,8 +27,25 @@ stargazer(iv_model,title = "Instrument Variables Estimates", se = rob_se,
           digits = 3, header = F,  out = "tables/iv_model.tex")   
 
 # (d) Complier Comparisons -----------------------------------------------------
-# Include gender interactions in the first stage 
-gender <- summary(lm(d ~ z*female, data))
+# Following notation from lecture define the following:
+p_a = mean(filter(data, z==0)$d)
+p_n = 1-mean(filter(data, z==1)$d)
+p_c = 1 - p_a - p_n 
+
+# Number of compliers
+round(p_c*nrow(data))
+
+# Check with regression:
+first_stage[[1]][2]
+
+# Proportion of male and female compliers using regression
+m_compliers <- 
+  (lm(d ~ z, filter(data,female==1))[[1]][2]*mean(data$female))/
+  first_stage[[1]][2]
+
+f_compliers <- 
+  (lm(d ~ z, filter(data,female==0))[[1]][2]*(1-mean(data$female)))/
+  first_stage[[1]][2]
 
 # Proportion of women in the population
 mean(data$female)
@@ -42,11 +60,6 @@ summary(ivreg(yd ~ d|z, data = data))
 summary(ivreg(ynd ~ nd|z, data = data)) 
 
 # Full distributions:
-
-# Following notation from lecture define the following:
-p_a = mean(filter(data, z==0)$d)
-p_n = 1-mean(filter(data, z==1)$d)
-p_c = 1 - p_a - p_n 
 
 # Estimate kernel densities
 f_00 = density(filter(data,z==0&d==0)$lnw, n = 1000, 
@@ -94,5 +107,43 @@ ggplot()+
 
 
 # (h) Category x Year Specific LATE's ------------------------------------------
+# TSLS with Category x Year controls and interactions
+tsls_fit <- ivreg(lnw ~ d + lotcateg*year|lotcateg*year*z + lotcateg*year,
+                  data = data)
+tsls_fit[[1]][2]
+
+
+# Initialise matrices to store estimates and weights and aggregates
+late_out<-pop_weight<-comp_weight<-matrix(nrow = 4,ncol = 2)
+
+rownames(late_out)<-rownames(pop_weight)<-rownames(comp_weight)<-
+  levels(data$lotcateg)
+
+colnames(late_out)<-colnames(pop_weight)<-colnames(comp_weight)<-
+  levels(data$year)
+
+pop_agg <- comp_agg <- 0
+
+# Loop and populate with estimates, weights and compute aggregates
+for (y in levels(data$year)){
+  for (c in levels(data$lotcateg)){
+    # Slope estimate:
+    model <- ivreg(lnw ~ d|z, data = filter(data, year == y, lotcateg == c))
+    late_out[c,y]<- model[[1]][2] 
+    
+    # Compute weights:
+    pop_weight[c,y] <- nrow(filter(data, year == y, lotcateg==c))/nrow(data)
+  
+    comp_weight[c,y] <- 
+      (lm(d ~ z, filter(data,female==1))[[1]][2]*pop_weight[c,y])/
+      first_stage[[1]][2]
+
+    # Update aggregates:
+    pop_agg <- pop_agg + (pop_weight[c,y]*late_out[c,y])
+    comp_agg <- comp_agg + (comp_weight[c,y]*late_out[c,y])
+  }
+}
+rm(model)
+
 
 
