@@ -1,0 +1,12 @@
+		(1)
+VARIABLES	LABELS	Wages (Logged)
+		
+d	Attended Med	0.187***
+		(0.0504)
+Constant	Constant	3.011***
+		(0.0407)
+		
+Observations		1,476
+R-squared		0.010
+Standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		

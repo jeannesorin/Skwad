@@ -1,0 +1,12 @@
+		(1)
+VARIABLES	LABELS	y1
+		
+d	Attended Med	3.264***
+		(0.0388)
+Constant	Constant	-0.0617**
+		(0.0275)
+		
+Observations		1,476
+R-squared		0.910
+Robust standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		

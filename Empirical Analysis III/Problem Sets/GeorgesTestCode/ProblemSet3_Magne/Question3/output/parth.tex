@@ -1,0 +1,27 @@
+\begin{table}[H] \centering
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+\caption{LATE Calculations}
+\begin{tabularx}{17cm}{lCCCCCC}
+
+\toprule
+{Year}&{lotcateg}&{LATE}&{pi\_x}&{variance\_z}&{weight\_final}&{observations} \tabularnewline
+\midrule\addlinespace[1.5ex]
+1988&3&-.8036624&.1688889&.0968158&.0488212&84 \tabularnewline
+1988&4&.119505&.3393711&.1828763&.3723632&209 \tabularnewline
+1988&5&.1592434&.6011594&.2401838&1.534555&190 \tabularnewline
+1988&6&.209577&.6574712&.2468435&1.886405&266 \tabularnewline
+1989&3&1.564191&.3054054&.0600454&.0990132&79 \tabularnewline
+1989&4&.0119386&.2723763&.157013&.2059366&191 \tabularnewline
+1989&5&.5186929&.3251226&.2182957&.4079428&210 \tabularnewline
+1989&6&.1453456&.6689347&.2394589&1.89434&247 \tabularnewline
+2SLS&&.1915246&&&&1476 \tabularnewline
+AI Weights&&.1915612&&&& \tabularnewline
+Pop Weighted&&.2128387&&&& \tabularnewline
+\bottomrule \addlinespace[1.5ex]
+
+\end{tabularx}
+\begin{flushleft}
+\footnotesize First 8 lines Estimate Category and Year Specific LATEs, 2SLS Line does 2SLS controlling for interactions in both stages, consistent with Angrist Impends Weights
+\end{flushleft}
+\end{table}

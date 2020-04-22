@@ -1,0 +1,12 @@
+		(1)
+VARIABLES	LABELS	y0
+		
+md	md	3.077***
+		(0.0293)
+Constant	Constant	-0.00472
+		(0.00475)
+		
+Observations		1,476
+R-squared		0.976
+Robust standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		
