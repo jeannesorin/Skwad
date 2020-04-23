@@ -39,11 +39,11 @@ round(p_c*nrow(data))
 first_stage[[1]][2]
 
 # Proportion of male and female compliers using regression
-m_compliers <- 
+f_compliers <- 
   (lm(d ~ z, filter(data,female==1))[[1]][2]*mean(data$female))/
   first_stage[[1]][2]
 
-f_compliers <- 
+m_compliers <- 
   (lm(d ~ z, filter(data,female==0))[[1]][2]*(1-mean(data$female)))/
   first_stage[[1]][2]
 
@@ -144,6 +144,7 @@ for (y in levels(data$year)){
   }
 }
 rm(model)
-
+stargazer(late_out,title = "LATE Estimates", digits = 3, 
+          header = F,  out = "tables/late_out.tex")  
 
 
