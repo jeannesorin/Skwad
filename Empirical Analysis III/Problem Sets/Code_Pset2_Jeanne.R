@@ -157,7 +157,8 @@ grid.arrange(p1+ theme(legend.position="none"),
 nsw_cps_nomiss <- nsw_cps[, c("treated", "age", "educ", "black", "married", "nodegree", "re74", "re75", "re78", "hisp", "kids18", 
                               "kidmiss")] %>% na.omit()  
 match <- matchit(treated ~ age + educ + black + married + nodegree + re74 + re75 + hisp + kids18 + kidmiss,
-                 method="nearest", data=nsw_cps_nomiss)
+                 method="nearest", data=nsw_cps_nomiss,
+                 replace=TRUE)
 plot(match, type = 'jitter', interactive = FALSE)
 
 matched.df <- match.data(match)
