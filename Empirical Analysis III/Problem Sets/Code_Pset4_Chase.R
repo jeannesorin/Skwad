@@ -32,8 +32,8 @@ naive_ols_tipuach <- glm(avgmath ~ classize + tipuach,
 naive_ols_tipuach_c_size <- glm(avgmath ~ classize + tipuach + c_size, 
                                 data = my_data)
 
-stargazer(naive_ols_no_controls, naive_ols_tipuach, naive_ols_tipuach_c_size, 
-          title = "Doin' dumb stuff", align = TRUE)
+# stargazer(naive_ols_no_controls, naive_ols_tipuach, naive_ols_tipuach_c_size, 
+#           title = "Doin' dumb stuff", align = TRUE)
 
 ##################
 # 2)
@@ -60,5 +60,27 @@ sharp_rdd_20_60_loc_lin <- RDestimate(avgmath ~ c_size,
                               cutpoint = 40)
 
 # Bootstrap to find standard errors
+S = 1000
+N = length(my_data_20_60_w_dummy$c_size)
+
+betas = rep(0,S)
+for(s in 1:S) {
+  sample_num <- sample(1:N, N, replace=TRUE)
+  sample_data <- my_data_20_60_w_dummy[sample_num,]
+  rdd_samp <- RDestimate(avgmath ~ c_size,
+                         data = sample_data,
+                         cutpoint = 40)
+  betas[s] <- rdd_samp$est["LATE"]
+}
+
+print(mean(betas))
+hist(betas)
+
+
+
+
+
+
+
 
 
