@@ -78,7 +78,11 @@ sub <- data %>%
 #above 40 and interact it with the large class dummy.
 
 # Y = a + b Z + c (c_size-40) + d (c_size-40)*Z + e X + u
-#sub$c_sizeadj = sub$c_size-40
+# cf slide 25/71: We assume that E(Y_d | R = r) is continuous in r. 
+# We would like to estimate Y = a + t D + f(R) + e, but f(R) is unknown, so we can instead use linear spline (AROUND c)
+# Y = a + t D + B (R - c) + g (R-c)*D + e
+# https://www.math.uh.edu/~jingqiu/math4364/spline.pdf
+sub$c_sizeadj = sub$c_size-40
 q2_a <- felm(avgmath ~ large*c_sizeadj + tipuach |0|0| schlcode, data=sub)
 q2_b <- felm(avgmath ~ large + classize + tipuach |0|0| schlcode, data=sub)
 
@@ -86,21 +90,11 @@ q2_a_cse <- list(sqrt(diag(q2_a$clustervcv)))
 q2_b_cse <- list(sqrt(diag(q2_b$clustervcv)))
 
 #stargazer(q2_a, q2_b, se = c(q2_a_cse, q2_b_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
-stargazer(q2_b, se = c(q2_b_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
+stargazer(q2_a, q2_b, se = c(q2_a_cse, q2_b_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
 stargazer(q2_b, se = c(q2_b_cse), #type="text", 
           notes = c("Standard Errors clustered at the schlcode level."), 
           out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q2.tex")
 
-
-# Select only those at the discontinuity (for the full sample)
-# disc <- data %>%
-#   filter(c_size %in% c(36:45, 76:85, 116:125)) %>%
-#   mutate(large = ifelse(c_size %in% c(41:45, 81:85, 121:125), 1, 0))
-# 
-# q2_d <- felm(avgmath ~ large |0|0| schlcode, data=disc)
-# q2_e <- felm(avgmath ~ large + tipuach |0|0| schlcode, data=disc)
-# q2_f <- felm(avgmath ~ large + tipuach + c_size |0|0| schlcode, data=disc)
-# 
 
 
 #3. Use Local Linear Regression to get a point estimate of the effect of being in a large class 
@@ -115,7 +109,7 @@ sub <- sub %>%
 local_effect1 = mean(sub$local1[sub$c_size<=43 & sub$c_size >= 41]) - mean(sub$local1[sub$c_size>=37 & sub$c_size<=40])
 local_effect1
 
-loc_sharp1 <- RDestimate(avgmath ~ c_size , data=sub, cutpoint = 40, bw = NULL,
+loc_sharp1 <- RDestimate(avgmath ~ c_size , data=sub, cutpoint = 40, bw = 3,
                          kernel = "triangular", se.type = "HC1", cluster = NULL,
                          verbose = FALSE, model = FALSE, frame = FALSE)
 print(loc_sharp1)
@@ -135,21 +129,21 @@ for (s in 1:S){
   new_num <- sample(1:N, N, replace=TRUE)
   new <- sub[new_num,]
   
-  local = RDestimate(avgmath ~ c_size , data=new, cutpoint = 40, bw = NULL,
+  local = RDestimate(avgmath ~ c_size , data=new, cutpoint = 40, bw = 10,
                      kernel = "triangular", se.type = "HC1", cluster = NULL,
                      verbose = FALSE, model = FALSE, frame = FALSE)
   beta_hats1[s] <- as.numeric(local$est[1])
   
-  loc_polsub = loess(avgmath ~ large*c_size, data=new) 
-  new <- new %>%
-    mutate(local1 = predict(loc_polsub, newdata = new))
-  beta_hats2[s]  = mean(new$local1[new$c_size<=43 & new$c_size >= 41]) - mean(new$local1[new$c_size>=37 & new$c_size<=40])
+  # loc_polsub = loess(avgmath ~ large*c_size, data=new) 
+  # new <- new %>%
+  #   mutate(local1 = predict(loc_polsub, newdata = new))
+  # beta_hats2[s]  = mean(new$local1[new$c_size<=43 & new$c_size >= 41]) - mean(new$local1[new$c_size>=37 & new$c_size<=40])
 }
 mean(beta_hats1)
 sqrt(mean(beta_hats1^2) - mean(beta_hats1)^2)
 
-mean(beta_hats2)
-sqrt(mean(beta_hats2^2) - mean(beta_hats2)^2)
+# mean(beta_hats2)
+# sqrt(mean(beta_hats2^2) - mean(beta_hats2)^2)
 
 
 
@@ -164,16 +158,29 @@ fuzzy2 <- RDestimate(avgmath ~ c_size + classize | tipuach + classize, data=sub,
            kernel = "triangular", se.type = "HC1", cluster = NULL,
            verbose = FALSE, model = FALSE, frame = FALSE)
 
-# fuzzy3 <- RDestimate(avgmath ~ c_size | tipuach + classize, data=sub, cutpoint = 40, bw = NULL,
-#                      kernel = "triangular", se.type = "HC1", cluster = NULL,
-#                      verbose = FALSE, model = FALSE, frame = FALSE)
+# cf slide 26
+sub <- sub %>%
+  mutate(pred = c_size/(trunc((c_size-1)/40)+1)) 
+fuzzy_s1 <- lm(classize ~ pred + c_sizeadj + pred:c_sizeadj, data=sub)
+fuzzy_s2 <- lm(avgmath ~ pred + c_sizeadj + pred:c_sizeadj, data=sub)
+beta = fuzzy_s1$coefficients[2] / fuzzy_s2$coefficients[2]
+beta
 
 print(fuzzy1)
 print(fuzzy2)
-#print(fuzzy3)
 plot(fuzzy1)
 plot(fuzzy2)
 
+
+#cf slide 32
+h=3
+c=40
+fuzzy4_s1l <- lm(data=sub[sub$c_size<=(c+h) & sub$c_size >= c,], classize ~ c_sizeadj)
+fuzzy4_s2l <- lm(data=sub[sub$c_size<=(c+h) & sub$c_size >= c,], avgmath ~ c_sizeadj)
+fuzzy4_s1r <- lm(data=sub[sub$c_size<=c & sub$c_size >= (c-h),], classize ~ c_sizeadj)
+fuzzy4_s2r <- lm(data=sub[sub$c_size<= c & sub$c_size >= (c-h),], avgmath ~ c_sizeadj)
+FRD = (fuzzy4_s2r$coefficients[2] - fuzzy4_s2l$coefficients[2]) / (fuzzy4_s1r$coefficients[2] - fuzzy4_s1l$coefficients[2])
+FRD
 
 
 #5. (*) Use -rdrobust- to estimate the effect of class size on math scores and compare your results.
