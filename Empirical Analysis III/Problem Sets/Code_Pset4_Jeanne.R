@@ -26,7 +26,7 @@ options(scipen = 6, digits = 4) # I prefer to view outputs in non-scientific not
 ## ---------------------------
 
 ## load up the packages we will need:  (uncomment as required)
-packages <- c("tidyverse", "data.table", "foreign", "stargazer", "rdd", "ggplot2", "lfe")
+packages <- c("tidyverse", "data.table", "foreign", "stargazer", "rdd", "ggplot2", "lfe", "rdrobust")
 lapply(packages, library, character.only = TRUE)
 
 ## ---------------------------
@@ -44,21 +44,18 @@ data <- read.dta("Empirical Analysis III/Problem Sets/data_pset4/final5.dta")
 # adding enrollment
 
 data$schlcode = factor(data$schlcode)
-q1_a <- felm(avgmath ~ classize |0|0| schlcode, data=data)
+q1_a <- felm(avgmath ~ classize | 0 | 0 | schlcode, data=data)
 q1_b <- felm(avgmath ~ classize + tipuach|0|0| schlcode, data=data)
 q1_c <- felm(avgmath ~ classize + tipuach + c_size|0|0| schlcode, data=data)
+q1_a_cse <- list(sqrt(diag(q1_a$clustervcv)))
+q1_b_cse <- list(sqrt(diag(q1_b$clustervcv)))
+q1_c_cse <- list(sqrt(diag(q1_c$clustervcv)))
 
-stargazer(q1_a, q1_b, q1_c, no.space=TRUE, out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q1.tex")
-stargazer(q1_a, q1_b, q1_c, no.space=TRUE, type="text")
+stargazer(q1_a, q1_b, q1_c, se = c(q1_a_cse, q1_b_cse, q1_c_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
+stargazer(q1_a, q1_b, q1_c, se = c(q1_a_cse, q1_b_cse, q1_c_cse), #type="text", 
+          notes = c("Standard Errors clustered at the schlcode level."), 
+          out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q1.tex")
 
-
-q1_a2 <- lm(avgmath ~ classize, data=data)
-q1_b2 <- lm(avgmath ~ classize + tipuach, data=data)
-
-q1_a2_rob_se <-list(sqrt(diag(vcovHC(q1_a2, type = "HC1"))))
-q1_b2_rob_se <-list(sqrt(diag(vcovHC(q1_b2, type = "HC1"))))
-stargazer(q1_a2, q1_b2, title = "Instrument Variables Estimates", se = c(q1_a2_rob_se, q1_b2_rob_se), 
-          digits = 3, header = F, type="text")# out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q7.tex")  
 
 
 #Start by limiting the sample to schools with enrollment between 20 and 60 students. 
@@ -71,13 +68,22 @@ sub <- data %>%
 #that you have a sharp RDD around this discontinuity. 
 #Control for the percentage of disadvantaged students in the class and a linear trend 
 #in enrollment.
+#To control for the linear trend in enrollment, we compute the number of enrolled students 
+#above 40 and interact it with the large class dummy.
 
-q2_a <- felm(avgmath ~ large |0|0| schlcode, data=sub)
-q2_b <- felm(avgmath ~ large + tipuach |0|0| schlcode, data=sub)
-q2_c <- felm(avgmath ~ large + tipuach + c_size |0|0| schlcode, data=sub)
+# Y = a + b Z + c (c_size-40) + d (c_size-40)*Z + e X + u
+#sub$c_sizeadj = sub$c_size-40
+#q2_a <- felm(avgmath ~ large*c_sizeadj + tipuach |0|0| schlcode, data=sub)
+q2_b <- felm(avgmath ~ large + classize + tipuach |0|0| schlcode, data=sub)
 
-stargazer(q2_a, q2_b, q2_c, no.space=TRUE, out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q2.tex")
-stargazer(q2_a, q2_b, q2_c, no.space=TRUE, type="text")
+q2_a_cse <- list(sqrt(diag(q2_a$clustervcv)))
+q2_b_cse <- list(sqrt(diag(q2_b$clustervcv)))
+
+#stargazer(q2_a, q2_b, se = c(q2_a_cse, q2_b_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
+stargazer(q2_b, se = c(q2_b_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
+stargazer(q2_b, se = c(q2_b_cse), #type="text", 
+          notes = c("Standard Errors clustered at the schlcode level."), 
+          out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q2.tex")
 
 
 # Select only those at the discontinuity (for the full sample)
@@ -89,7 +95,6 @@ stargazer(q2_a, q2_b, q2_c, no.space=TRUE, type="text")
 # q2_e <- felm(avgmath ~ large + tipuach |0|0| schlcode, data=disc)
 # q2_f <- felm(avgmath ~ large + tipuach + c_size |0|0| schlcode, data=disc)
 # 
-# stargazer(q2_d, q2_e, q2_f, no.space=TRUE, type="text")
 
 
 #3. Use Local Linear Regression to get a point estimate of the effect of being in a large class 
@@ -97,42 +102,55 @@ stargazer(q2_a, q2_b, q2_c, no.space=TRUE, type="text")
 #Finally, use a nonparametric bootstrap to estimate the standard error on your RDD point 
 #estimate. Compare these results to the estimates you obtained with OLS.
 
-
-
 # Local linear regression
-loc_pol = loess(avgmath ~ large, data=sub) 
+loc_pol1 = loess(avgmath ~ large*c_size, data=sub) 
 sub <- sub %>%
-  mutate(local = predict(loc_pol, newdata = sub))
-local_effect = mean(sub$local[sub$large==1]) - mean(sub$local[sub$large==0])
-local_effect
+  mutate(local1 = predict(loc_pol1, newdata = sub))
+local_effect1 = mean(sub$local1[sub$c_size<=43 & sub$c_size >= 41]) - mean(sub$local1[sub$c_size>=37 & sub$c_size<=40])
+local_effect1
+
+loc_sharp1 <- RDestimate(avgmath ~ c_size , data=sub, cutpoint = 40, bw = NULL,
+                         kernel = "triangular", se.type = "HC1", cluster = NULL,
+                         verbose = FALSE, model = FALSE, frame = FALSE)
+print(loc_sharp1)
+plot(loc_sharp1)
+local_effect1
+
+# ggplot(data=sub) + theme_bw() +
+#   geom_line(aes(x=c_size, y=local1), color="red") +
+#   geom_point(aes(x=c_size, y=avgmath))
+
+
+
 
 
 # Bootstrap to estimate standard errors
 
 
 
+
+
 #4. Estimate the effect of class size on math scores using fuzzy RDD. 
 #Control for the percentage of disadvantaged students in the class and a linear 
 #trend in enrollment.
-fuzzy1 <- RDestimate(avgmath ~ c_size + classize , data=sub, cutpoint = 40, bw = NULL,
+fuzzy1 <- RDestimate(avgmath ~ c_size + classize | tipuach, data=sub, cutpoint = 40, bw = NULL,
            kernel = "triangular", se.type = "HC1", cluster = NULL,
            verbose = FALSE, model = FALSE, frame = FALSE)
 
-fuzzy2 <- RDestimate(avgmath ~ c_size + classize| tipuach + c_size, data=sub, cutpoint = 40, bw = NULL,
+fuzzy2 <- RDestimate(avgmath ~ c_size + classize | tipuach + classize, data=sub, cutpoint = 40, bw = NULL,
            kernel = "triangular", se.type = "HC1", cluster = NULL,
            verbose = FALSE, model = FALSE, frame = FALSE)
 
-fuzzy1
-fuzzy2
+# fuzzy3 <- RDestimate(avgmath ~ c_size | tipuach + classize, data=sub, cutpoint = 40, bw = NULL,
+#                      kernel = "triangular", se.type = "HC1", cluster = NULL,
+#                      verbose = FALSE, model = FALSE, frame = FALSE)
 
+print(fuzzy1)
+print(fuzzy2)
+#print(fuzzy3)
+plot(fuzzy1)
+plot(fuzzy2)
 
-reg <- lm(data = data, avgmath ~ tipuach + c_size)
-
-dta <- data.frame(res = reg$residuals,
-                  enrollment = reg$model$c_size) %>%
-  
-
-ggplot() + geom_line(data=dta, aes(enrollment, res)) + geom_line(data=data, aes(c_size, pred))
 
 
 #5. (*) Use -rdrobust- to estimate the effect of class size on math scores and compare your results.
@@ -148,8 +166,9 @@ data <- data %>%
 
 
 spline.d <- as.data.frame(spline(data$c_size, data$classize))
-data = cbind(data, spline.d)
-ggplot() + geom_line(data = spline.d, aes(x = x, y = y))
+ggplot() + geom_line(data = spline.d, aes(x = x, y = y)) + xla
+
+
 
 #6. Plot average class size as a function of enrollment. Add predicted class size to the plot.
 pdf("Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q6_plot.pdf")
@@ -161,23 +180,161 @@ ggplot() + theme_classic() +
   geom_line(data = spline.d, aes(x = x, y = y)) 
 dev.off()
 
+
 #7. Estimate the effect of class size on math scores using IV.
 iv_model <- ivreg(avgmath ~ classize | pred, data=data)
 iv_rob_se <-list(sqrt(diag(vcovHC(iv_model, type = "HC1"))))
-stargazer(iv_model,title = "Instrument Variables Estimates", se = rob_se, 
+stargazer(iv_model, se = iv_rob_se, type="text")
+stargazer(iv_model,title = "Instrument Variables Estimates", se = iv_rob_se, 
           digits = 3, header = F,  out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q7.tex")  
 
-#stage1 <- lm(classize ~ pred, data=data)  
-#stage2 <- lm(avgmath ~ pred, data=data)
 
-#beta = stage2$coefficients[2] / stage1$coefficients[2]
-#beta
 
 #8. If the RDD is valid, then the coefficient of interest should not change significantly if we
 #include or exclude covariates. Check whether this is the case.
-stage1 <- lm(classize ~ pred + tipuach + c_size, data=data)  
-stage2 <- lm(avgmath ~ pred + tipuach + c_size, data=data)
+iv_model_covariates <- ivreg(avgmath ~ classize + tipuach + c_size| pred + tipuach + c_size, data=data)
+iv_cov_rob_se <-list(sqrt(diag(vcovHC(iv_model_covariates, type = "HC1"))))
+stargazer(iv_model_covariates, se = iv_cov_rob_se, type="text")
 
-beta = stage2$coefficients[2] / stage1$coefficients[2]
-beta
+#stage1 <- lm(classize ~ pred + tipuach + c_size, data=data)  
+#stage2 <- lm(avgmath ~ pred + tipuach + c_size, data=data)
+#beta = stage2$coefficients[2] / stage1$coefficients[2]
+#beta
+
+#9. Manipulation: Plot the distribution of the assignment variable.
+pdf("Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q9_plot.pdf")
+ggplot(data=data, aes(x=c_size)) + theme_bw() +
+  geom_histogram(aes(y=..density..), alpha=.2, fill="#FF6666", 
+                 breaks=seq(from = 5, to = 220, by = 5))+ 
+  geom_density()+
+  geom_vline(xintercept = c(40, 80, 120, 160), lty=3, color="blue") 
+dev.off()
+
+#10. Misspecification 1: Present a graph using binned local averages of class size and math score 
+# against enrollment. Use bins of width 20 and make sure that the bins do not cover the discontinuities. 
+#Can you see the discontinuity in class size and math scores?
+
+data$group_test = unlist(lapply(data$c_size, function(x) ceiling(max(x)/20)*20))
+
+data <- data %>%
+  group_by(group_test) %>%
+  mutate(mean_math = mean(avgmath, na.rm=T),
+         mean_classize = mean(classize, na.rm=T)) %>%
+  ungroup()
+pdf("Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q10_plot.pdf")
+coeff <- 2
+ggplot(data=data[data$mean_classize>20,], aes(x=c_size)) + theme_bw() +
+  geom_line(aes(y=mean_classize), col="purple")+ 
+  geom_line(aes(y=mean_math / coeff), col="red") +
+  geom_vline(xintercept = c(40, 80, 120, 160), lty=3, color="blue") +
+  scale_y_continuous(
+    name = "Average Classize",
+    sec.axis = sec_axis(~.*coeff, name="Mean Math Score")) +
+  theme(axis.title.y = element_text(color = "purple", size=13),
+    axis.title.y.right = element_text(color = "red", size=13)) 
+dev.off()
+
+
+data$c_size2 = data$c_size*data$c_size
+
+linear_math = lm(data=data, avgmath ~ c_size)
+quad_math = lm(data=data, avgmath ~ c_size2 + c_size)
+linear_size = lm(data=data, classize ~ c_size)
+quad_size = lm(data=data, classize ~ c_size2 + c_size)
+
+pred1 <- data.frame(avgmath = linear_math$model$avgmath,
+                    c_size = linear_math$model$c_size,
+                    fit_l_math = linear_math$fitted.values,
+                    fit_q_math = quad_math$fitted.values)
+pred2 <- data.frame(c_size = linear_size$model$c_size,
+                    classize = linear_size$model$classize,
+                    fit_l_size = linear_size$fitted.values,
+                    fit_q_size = quad_size$fitted.values)
+
+
+pdf("Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q11_plot.pdf")
+coeff <- 2.5
+ggplot() + theme_bw() +
+  geom_line(data=data[data$mean_classize>20,], aes(x=c_size, y=mean_classize), col="purple")+ 
+  geom_line(data=pred2, aes(x=c_size, y=fit_q_size), col="purple", lty=2)+
+  geom_line(data=pred2, aes(x=c_size, y=fit_l_size), col="purple", lty=2)+
+  geom_line(data=data[data$mean_classize>20,], aes(x=c_size, y=mean_math / coeff), col="red") +
+  geom_line(data=pred1, aes(x=c_size, y=fit_q_math / coeff), col="red", lty=2)+
+  geom_line(data=pred1, aes(x=c_size, y=fit_l_math / coeff), col="red", lty=2)+
+  geom_vline(xintercept = c(40, 80, 120, 160), lty=3, color="blue") +
+  scale_y_continuous(
+    name = "Average Classize",
+    sec.axis = sec_axis(~.*coeff, name="Mean Math Score")) +
+  theme(axis.title.y = element_text(color = "purple", size=13),
+        axis.title.y.right = element_text(color = "red", size=13)) 
+dev.off()
+
+
+#12. Misspecification 3: Explore the sensitivity of the results in 7) to 1) bandwidths 
+#(restrict the estimation sample to intervals around the discontinuities), 
+#and 2) how you control for enrollment.
+
+disc0 <- data %>%
+  filter(c_size %in% c(30:50, 70:90, 110:130)) 
+disc1 <- data %>%
+    filter(c_size %in% c(36:45, 76:85, 116:125)) 
+disc2 <- data %>%
+  filter(c_size %in% c(37:44, 75:84, 117:124)) 
+disc3 <- data %>%
+  filter(c_size %in% c(38:43, 74:83, 118:123)) 
+
+iv_model_120 <- ivreg(avgmath ~ classize | pred, data=disc0)
+iv_rob_se120 <-list(sqrt(diag(vcovHC(iv_model_120, type = "HC1"))))
+iv_model_121 <- ivreg(avgmath ~ classize | pred, data=disc1)
+iv_rob_se121 <-list(sqrt(diag(vcovHC(iv_model_121, type = "HC1"))))
+iv_model_122 <- ivreg(avgmath ~ classize | pred, data=disc2)
+iv_rob_se122 <-list(sqrt(diag(vcovHC(iv_model_122, type = "HC1"))))
+iv_model_123 <- ivreg(avgmath ~ classize | pred, data=disc3)
+iv_rob_se123 <-list(sqrt(diag(vcovHC(iv_model_123, type = "HC1"))))
+
+stargazer(iv_model_120, iv_model_121, iv_model_122, iv_model_123, 
+          column.labels=c("+-10","+-5", "+-4", "+-3"),
+          se = c(iv_rob_se120, iv_rob_se121, iv_rob_se122, iv_rob_se123), type="text")
+
+stargazer(iv_model_120, iv_model_121, iv_model_122, iv_model_123, 
+          se = c(iv_rob_se120, iv_rob_se121, iv_rob_se122, iv_rob_se123),
+          title = "Instrument Variables Estimates - Multiple Bandwidth", 
+          column.labels=c("+-10","+-5", "+-4", "+-3"),
+          digits = 3, header = F,  
+          out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q12a.tex")  
+
+# Control for enrollment
+iv_model <- ivreg(avgmath ~ classize + c_size | pred + c_size, data=data)
+iv_rob_se <-list(sqrt(diag(vcovHC(iv_model, type = "HC1"))))
+stargazer(iv_model, se = iv_rob_se, type="text")
+stargazer(iv_model,title = "Instrument Variables Estimates", se = iv_rob_se, 
+          digits = 3, header = F,  out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q12b.tex")  
+
+
+
+
+#13. Placebo check: Conduct the RD analysis where your outcome is percentage disadvantaged pupils.
+
+# Simple OLS
+lm(data=sub, tipuach ~ large)
+
+# IV
+ivreg(tipuach ~ classize | pred, data=data)
+
+# Local linear estimate : Sharp RDD
+loc_sharp1 <- RDestimate(tipuach ~ c_size , data=sub, cutpoint = 40, bw = NULL,
+                         kernel = "triangular", se.type = "HC1", cluster = NULL,
+                         verbose = FALSE, model = FALSE, frame = FALSE)
+print(loc_sharp1)
+plot(loc_sharp1)
+
+# Local linear estimate : Fuzzy RDD
+fuzzy1 <- RDestimate(tipuach ~  c_size + classize, data=sub, cutpoint = 40, bw = NULL,
+                     kernel = "triangular", se.type = "HC1", cluster = NULL,
+                     verbose = FALSE, model = FALSE, frame = FALSE)
+
+print(fuzzy1)
+plot(fuzzy1)
+
+
 
