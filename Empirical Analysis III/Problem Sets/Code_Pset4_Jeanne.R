@@ -35,6 +35,12 @@ lapply(packages, library, character.only = TRUE)
 
 # source("~/Documents/PhD/Skwad/Random_Resources/JeanneR_formula.R") 
 
+
+## ---------------------------
+
+
+
+
 ## ---------------------------
 
 data <- read.dta("Empirical Analysis III/Problem Sets/data_pset4/final5.dta")
@@ -73,7 +79,7 @@ sub <- data %>%
 
 # Y = a + b Z + c (c_size-40) + d (c_size-40)*Z + e X + u
 #sub$c_sizeadj = sub$c_size-40
-#q2_a <- felm(avgmath ~ large*c_sizeadj + tipuach |0|0| schlcode, data=sub)
+q2_a <- felm(avgmath ~ large*c_sizeadj + tipuach |0|0| schlcode, data=sub)
 q2_b <- felm(avgmath ~ large + classize + tipuach |0|0| schlcode, data=sub)
 
 q2_a_cse <- list(sqrt(diag(q2_a$clustervcv)))
@@ -116,17 +122,34 @@ print(loc_sharp1)
 plot(loc_sharp1)
 local_effect1
 
-# ggplot(data=sub) + theme_bw() +
-#   geom_line(aes(x=c_size, y=local1), color="red") +
-#   geom_point(aes(x=c_size, y=avgmath))
-
-
-
-
 
 # Bootstrap to estimate standard errors
+# Bootstrap
+S = 10000
+N = nrow(sub)
+beta_hats1 = rep(0, S)
+beta_hats2 = rep(0, S)
 
+for (s in 1:S){
+  print(s)
+  new_num <- sample(1:N, N, replace=TRUE)
+  new <- sub[new_num,]
+  
+  local = RDestimate(avgmath ~ c_size , data=new, cutpoint = 40, bw = NULL,
+                     kernel = "triangular", se.type = "HC1", cluster = NULL,
+                     verbose = FALSE, model = FALSE, frame = FALSE)
+  beta_hats1[s] <- as.numeric(local$est[1])
+  
+  loc_polsub = loess(avgmath ~ large*c_size, data=new) 
+  new <- new %>%
+    mutate(local1 = predict(loc_polsub, newdata = new))
+  beta_hats2[s]  = mean(new$local1[new$c_size<=43 & new$c_size >= 41]) - mean(new$local1[new$c_size>=37 & new$c_size<=40])
+}
+mean(beta_hats1)
+sqrt(mean(beta_hats1^2) - mean(beta_hats1)^2)
 
+mean(beta_hats2)
+sqrt(mean(beta_hats2^2) - mean(beta_hats2)^2)
 
 
 
