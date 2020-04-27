@@ -1,0 +1,14 @@
+	(1)
+VARIABLES	avgmath
+	
+classize	0.0866***
+	(0.0322)
+tipuach	-0.331***
+	(0.0166)
+Constant	69.39***
+	(1.099)
+	
+Observations	2,024
+R-squared	0.219
+Robust standard errors in parentheses	
+*** p<0.01, ** p<0.05, * p<0.1	
