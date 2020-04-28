@@ -57,8 +57,8 @@ q1_a_cse <- list(sqrt(diag(q1_a$clustervcv)))
 q1_b_cse <- list(sqrt(diag(q1_b$clustervcv)))
 q1_c_cse <- list(sqrt(diag(q1_c$clustervcv)))
 
-stargazer(q1_a, q1_b, q1_c, se = c(q1_a_cse, q1_b_cse, q1_c_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
-stargazer(q1_a, q1_b, q1_c, se = c(q1_a_cse, q1_b_cse, q1_c_cse), #type="text", 
+stargazer(q1_a, q1_b, q1_c, se = c(list(q1_a$cse), list(q1_b$cse), list(q1_c$cse)), type="text", notes = c("Standard Errors clustered at the schlcode level."))
+stargazer(q1_a, q1_b, q1_c, se = c(list(q1_a$cse), list(q1_b$cse), list(q1_c$cse)), #type="text", 
           notes = c("Standard Errors clustered at the schlcode level."), 
           out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q1.tex")
 
@@ -83,17 +83,29 @@ sub <- data %>%
 # Y = a + t D + B (R - c) + g (R-c)*D + e
 # https://www.math.uh.edu/~jingqiu/math4364/spline.pdf
 sub$c_sizeadj = sub$c_size-40
+sub$c_sizeadjpaper = ifelse(sub$c_size <= 40, sub$c_size, 20 + sub$c_size/2)
+
+ggplot(data=sub) +
+  geom_line(aes(x=c_size, y=c_sizeadj), col="blue") +
+  geom_line(aes(x=c_size, y=c_sizeadjpaper), col="red")
+  
+#linear spline
 q2_a <- felm(avgmath ~ large*c_sizeadj + tipuach |0|0| schlcode, data=sub)
-q2_b <- felm(avgmath ~ large + classize + tipuach |0|0| schlcode, data=sub)
+#linear trend in enrollment (simple control in OLS)
+q2_b <- felm(avgmath ~ large + c_size + tipuach |0|0| schlcode, data=sub)
+# 
+q2_c <- felm(avgmath ~ large + c_sizeadjpaper + tipuach |0|0| schlcode, data=sub)
 
-q2_a_cse <- list(sqrt(diag(q2_a$clustervcv)))
-q2_b_cse <- list(sqrt(diag(q2_b$clustervcv)))
+stargazer(q2_a, q2_b, q2_c, se = c(list(q2_a$cse), list(q2_b$cse), list(q2_c$cse)), 
+          type="text")
 
-#stargazer(q2_a, q2_b, se = c(q2_a_cse, q2_b_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
-stargazer(q2_a, q2_b, se = c(q2_a_cse, q2_b_cse), type="text", notes = c("Standard Errors clustered at the schlcode level."))
-stargazer(q2_b, se = c(q2_b_cse), #type="text", 
-          notes = c("Standard Errors clustered at the schlcode level."), 
-          out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q2.tex")
+stargazer(q2_a, q2_b, q2_c, se = c(list(q2_a$cse), list(q2_b$cse) ,list(q2_c$cse)), #type="text", 
+          column.labels = c("Linear Spline", "Enrollment enters linearly", "Piecewise linear trend"),
+          out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q2.tex",
+          notes=c("Linear spline corresponds to the exposition slide 25",
+                  "Enrollment enters linearly simply means that it enters OLS as a covariate",
+                  "Piecewise Linear Trend refers to the paper's definition",
+                  "Standard errors clustered at the School code level"))
 
 
 
@@ -103,18 +115,20 @@ stargazer(q2_b, se = c(q2_b_cse), #type="text",
 #estimate. Compare these results to the estimates you obtained with OLS.
 
 # Local linear regression
-loc_pol1 = loess(avgmath ~ large*c_size, data=sub) 
-sub <- sub %>%
-  mutate(local1 = predict(loc_pol1, newdata = sub))
-local_effect1 = mean(sub$local1[sub$c_size<=43 & sub$c_size >= 41]) - mean(sub$local1[sub$c_size>=37 & sub$c_size<=40])
-local_effect1
+# loc_pol1 = loess(avgmath ~ large*c_size, data=sub) 
+# sub <- sub %>%
+#   mutate(local1 = predict(loc_pol1, newdata = sub))
+# local_effect1 = mean(sub$local1[sub$c_size<=43 & sub$c_size >= 41]) - mean(sub$local1[sub$c_size>=37 & sub$c_size<=40])
+# local_effect1
 
-loc_sharp1 <- RDestimate(avgmath ~ c_size , data=sub, cutpoint = 40, bw = 3,
-                         kernel = "triangular", se.type = "HC1", cluster = NULL,
+# The RDestimate version of local linear regression. Note that we fix a bandwith to be able to do the bootstrap
+h = 9.08
+loc_sharp1 <- RDestimate(avgmath ~ c_size | tipuach + classize, data=sub, cutpoint = 40, bw = h,
+                         kernel = "triangular", se.type = "HC1", cluster = sub$schlcode,
                          verbose = FALSE, model = FALSE, frame = FALSE)
-print(loc_sharp1)
+summary(loc_sharp1)
 plot(loc_sharp1)
-local_effect1
+
 
 
 # Bootstrap to estimate standard errors
@@ -122,15 +136,14 @@ local_effect1
 S = 10000
 N = nrow(sub)
 beta_hats1 = rep(0, S)
-beta_hats2 = rep(0, S)
+#beta_hats2 = rep(0, S)
 
 for (s in 1:S){
   print(s)
   new_num <- sample(1:N, N, replace=TRUE)
   new <- sub[new_num,]
-  
-  local = RDestimate(avgmath ~ c_size , data=new, cutpoint = 40, bw = 10,
-                     kernel = "triangular", se.type = "HC1", cluster = NULL,
+  local = RDestimate(avgmath ~ c_size , data=new, cutpoint = 40, bw = h,
+                     kernel = "triangular", se.type = "HC1", cluster = new$schlcode,
                      verbose = FALSE, model = FALSE, frame = FALSE)
   beta_hats1[s] <- as.numeric(local$est[1])
   
@@ -141,35 +154,34 @@ for (s in 1:S){
 }
 mean(beta_hats1)
 sqrt(mean(beta_hats1^2) - mean(beta_hats1)^2)
-
-# mean(beta_hats2)
-# sqrt(mean(beta_hats2^2) - mean(beta_hats2)^2)
+ggplot() + theme_bw() +
+  geom_histogram(aes(x=beta_hats1), bins = 100, lty=0.2) +
+  geom_vline(xintercept =  mean(beta_hats1), col="blue") +     #mean of the estimate from Bootstrap
+  geom_vline(xintercept =  loc_sharp1$est["LATE"], col="red")  #actual estimate
 
 
 
 #4. Estimate the effect of class size on math scores using fuzzy RDD. 
 #Control for the percentage of disadvantaged students in the class and a linear 
 #trend in enrollment.
-fuzzy1 <- RDestimate(avgmath ~ c_size + classize | tipuach, data=sub, cutpoint = 40, bw = NULL,
+fuzzy1 <- RDestimate(avgmath ~ c_size + classize | tipuach + classize, data=sub, cutpoint = 40, bw = NULL,
            kernel = "triangular", se.type = "HC1", cluster = NULL,
            verbose = FALSE, model = FALSE, frame = FALSE)
 
-fuzzy2 <- RDestimate(avgmath ~ c_size + classize | tipuach + classize, data=sub, cutpoint = 40, bw = NULL,
-           kernel = "triangular", se.type = "HC1", cluster = NULL,
-           verbose = FALSE, model = FALSE, frame = FALSE)
+summary(fuzzy1)
+print(fuzzy1)
+plot(fuzzy1)
+
 
 # cf slide 26
 sub <- sub %>%
   mutate(pred = c_size/(trunc((c_size-1)/40)+1)) 
-fuzzy_s1 <- lm(classize ~ pred + c_sizeadj + pred:c_sizeadj, data=sub)
-fuzzy_s2 <- lm(avgmath ~ pred + c_sizeadj + pred:c_sizeadj, data=sub)
+fuzzy_s1 <- lm(classize ~ pred + c_size + tipuach, data=sub)
+fuzzy_s2 <- lm(avgmath ~ pred + c_size + tipuach, data=sub)
 beta = fuzzy_s1$coefficients[2] / fuzzy_s2$coefficients[2]
 beta
 
-print(fuzzy1)
-print(fuzzy2)
-plot(fuzzy1)
-plot(fuzzy2)
+
 
 
 #cf slide 32
