@@ -1,0 +1,50 @@
+
+% Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: Mon, Apr 27, 2020 - 14:26:08
+\begin{table}[!htbp] \centering 
+  \caption{} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}}lccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{3}{c}{\textit{Dependent variable:}} \\ 
+\cline{2-4} 
+\\[-1.8ex] & \multicolumn{3}{c}{avgmath} \\ 
+ & Linear Spline & Enrollment enters linearly & Piecewise linear trend \\ 
+\\[-1.8ex] & (1) & (2) & (3)\\ 
+\hline \\[-1.8ex] 
+ large & 4.133$^{**}$ & 3.444$^{**}$ & 4.206$^{**}$ \\ 
+  & (1.641) & (1.626) & (1.656) \\ 
+  & & & \\ 
+ c\_sizeadj & $-$0.228$^{**}$ &  &  \\ 
+  & (0.108) &  &  \\ 
+  & & & \\ 
+ c\_size &  & $-$0.078 &  \\ 
+  &  & (0.068) &  \\ 
+  & & & \\ 
+ c\_sizeadjpaper &  &  & $-$0.154$^{*}$ \\ 
+  &  &  & (0.092) \\ 
+  & & & \\ 
+ tipuach & $-$0.340$^{***}$ & $-$0.341$^{***}$ & $-$0.342$^{***}$ \\ 
+  & (0.023) & (0.023) & (0.023) \\ 
+  & & & \\ 
+ large:c\_sizeadj & 0.234$^{*}$ &  &  \\ 
+  & (0.138) &  &  \\ 
+  & & & \\ 
+ Constant & 67.810$^{***}$ & 72.490$^{***}$ & 74.750$^{***}$ \\ 
+  & (1.394) & (2.160) & (2.823) \\ 
+  & & & \\ 
+\hline \\[-1.8ex] 
+Observations & 656 & 656 & 656 \\ 
+R$^{2}$ & 0.317 & 0.313 & 0.315 \\ 
+Adjusted R$^{2}$ & 0.313 & 0.310 & 0.312 \\ 
+Residual Std. Error & 8.629 (df = 651) & 8.646 (df = 652) & 8.635 (df = 652) \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{3}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+ & \multicolumn{3}{r}{Linear spline corresponds to the exposition slide 25} \\ 
+ & \multicolumn{3}{r}{Enrollment enters linearly simply means that it enters OLS as a covariate} \\ 
+ & \multicolumn{3}{r}{Piecewise Linear Trend refers to the paper's definition} \\ 
+ & \multicolumn{3}{r}{Standard errors clustered at the School code level} \\ 
+\end{tabular} 
+\end{table} 
