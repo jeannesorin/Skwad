@@ -52,7 +52,7 @@ naive_ols_tipuach_c_size <- felm(avgmath ~ classize + tipuach + c_size | 0 | 0| 
 # Get data with between 20 and 60 students (exclusive), and add dummy
 my_data_20_60 <- my_data %>% 
   filter(c_size > 20 & c_size < 60) %>% 
-  mutate(large = ifelse(c_size > 40,1,0))
+  mutate(large = ifelse(c_size <= 40,1,0))
 
 # Sharp RDD at 40 student cutoff
 sharp_rdd_20_60_ols <- felm(avgmath ~ large + tipuach + c_size | 0 | 0 | schlcode, 
@@ -63,7 +63,8 @@ sharp_rdd_20_60_ols <- felm(avgmath ~ large + tipuach + c_size | 0 | 0 | schlcod
 # 3) Note: se.type = "HC1" makes the se calculations hetskad robust
 
 # Uses full sample in bandwidth
-my_bw = max(my_data_20_60$c_size)
+# my_bw = max(my_data_20_60$c_size)
+my_bw = 9
 
 # Run Sharp RDD with loc lin regression
 sharp_rdd_20_60_loc_lin <- RDestimate(avgmath ~ c_size,
@@ -110,9 +111,13 @@ fuzzy_rdd_20_60 <- RDestimate(avgmath ~ c_size + classize | tipuach + c_size,
 ##############
 # 5)
 
-# check what is going on here
-rdr_20_60 <- rdrobust(y = my_data_20_60$avgmath, x = my_data_20_60$c_size,
+# This matches Manav (it seems), but not Jeanne?
+rdr_20_60_fuzzy <- rdrobust(y = my_data_20_60$avgmath, x = my_data_20_60$c_size,
                       fuzzy = my_data_20_60$large,
+                      c = 40)
+
+# need to flip sign for treatment "large"
+rdr_20_60_sharp <- rdrobust(y = my_data_20_60$avgmath, x = my_data_20_60$c_size,
                       c = 40)
 
 ##############
