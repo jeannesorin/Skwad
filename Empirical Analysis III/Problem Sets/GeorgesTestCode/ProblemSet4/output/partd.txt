@@ -1,0 +1,14 @@
+		(1)
+VARIABLES	LABELS	Math score
+		
+classize	Class size	-0.386*
+		(0.200)
+tipuach	Percent disadvantaged	-0.356***
+		(0.026)
+c_size	Enrollment	0.065*
+		(0.037)
+		
+Observations		656
+R-squared		0.245
+Robust standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		

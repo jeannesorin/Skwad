@@ -1,0 +1,10 @@
+		(1)
+VARIABLES	LABELS	Math score
+		
+classize	Class size	0.298***
+		(0.061)
+		
+Observations		2,024
+R-squared		0.045
+Robust standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		

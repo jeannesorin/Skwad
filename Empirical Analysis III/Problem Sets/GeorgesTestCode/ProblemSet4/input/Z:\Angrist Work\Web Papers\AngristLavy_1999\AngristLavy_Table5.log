@@ -1,0 +1,410 @@
+-------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/georgevojta/Dropbox/Uchicago 
+> Notes/Year1/Magne/ProblemSets/ProblemSet4/input
+> /Z:\Angrist Work\Web Papers\AngristLavy_1999\An
+> gristLavy_Table5.log
+  log type:  text
+ opened on:  27 Apr 2020, 20:39:09
+
+. 
+. ***********************************************
+> ********
+. * PROGRAM: AngristLavy_Table5
+. * PROGRAMMER: Simone Schaner (sschaner@mit.edu)
+. * PURPOSE: Recreates Table 5 of Angrist and Lav
+> y (1999)
+. *       including Moulton ses
+. * DATE CREATED: 8/13/07
+. ***********************************************
+> ********
+. clear
+
+. set mem 50m
+set memory ignored.
+    Memory no longer needs to be set in modern
+    Statas; memory adjustments are performed on
+    the fly automatically.
+
+. set more off
+
+. 
+. cd "/Users/georgevojta/Dropbox/Uchicago Notes/Y
+> ear1/Magne/ProblemSets/ProblemSet4"
+/Users/georgevojta/Dropbox/Uchicago Notes/Year1/M
+> agne/ProblemSets/ProblemSet4
+
+. 
+. * YOU MUST INCLUDE THIS DO FILE TO IMPLEMENT TH
+> E OLS MOULTONS
+. do "$input/mmoulton_post.do"
+
+. ***********************************************
+> *****************
+. * PROGRAM: MMoulton
+. * PROGRAMMER: Simone Schaner (sschaner@mit.edu)
+. * PURPOSE: This creates a program
+. *       that adjusts regression standard errors
+. *       for clustering using the method in 
+. *       Moulton (1986)
+. * DATE CREATED: 8/10/07
+. * NOTE1: you can save this as an ado file as we
+> ll
+. * NOTE2: This program remains a work in progres
+> s. If 
+. *       you find mistakes or find ways to impro
+> ve the
+. *       efficiency, email me at sschaner@mit.ed
+> u to
+. *       let me know.
+. ***********************************************
+> *******************
+. 
+. * SYNTAX: 
+.         * OLS: mmoulton depvar inddepvars [if] 
+> [in] [weight], cluvar(clustervar)
+.         * 2SLS: mmoulton depvar (enog=inst) exo
+> g [if] [in] [weight], cluvar(clustervar) 2sls
+.         
+. cap prog drop mmoulton
+
+. program define mmoulton, eclass
+  1. 
+. syntax anything [if] [in] [aw fw iw pw], [2sls]
+>  CLuvar(string)
+  2. 
+. preserve
+  3. marksample touse
+  4. qui {
+  5. 
+. if "`weight'"=="" local wt=""   
+  6. else local wt="`weight'=`exp'"
+  7. 
+. tempvar res2 sum_j sum_k sum_jk test res kr sor
+> ter
+  8. tempfile bigset
+  9. 
+. g `sorter'=`cluvar'
+ 10. sort `sorter'
+ 11. 
+.         keep if `touse'
+ 12. 
+.         tempvar count res2 sum_j sum_k sum_jk t
+> est res kr2
+ 13.         g byte `count'=1
+ 14. 
+.         /* ICC FOR RESIDUAL */
+.         if "`2sls'"=="" {
+ 15.                 reg `anything' [`wt']   
+ 16.                 }
+ 17.         else {
+ 18.                 ivreg `anything' [`wt']
+ 19.                 local exog=e(insts)
+ 20.                 local endog=e(instd)
+ 21.                 }
+ 22.                 
+. local depn=e(depvar)
+ 23. local S_E_df=e(df_m)
+ 24. local S_E_nobs=e(N)
+ 25. local S_E_r2=e(r2)
+ 26. local S_E_ar2=e(r2_a)
+ 27. local S_E_rmse=e(rmse)
+ 28. 
+. predict `res', res
+ 29.         sum `res'
+ 30. keep if e(sample)
+ 31. 
+. 
+. local kr=e(df_m)+1              
+ 32. scalar r2=e(r2)
+ 33. scalar rmse=e(rmse)
+ 34. 
+. g `res2'=`res'^2
+ 35.  sum `res2' [`wt']
+ 36. local var_v=r(sum)/(r(N)-`kr') /*S-SQUARED*/
+ 37. 
+.         mat coeff=e(b)
+ 38.         mat var=e(V)
+ 39. 
+. save "`bigset'"
+ 40. 
+. collapse (sum) `count' [`wt'], by(`sorter') fas
+> t
+ 41. ********************************************
+> ***********************************
+. * STEP 1) GET ALL INFO BESIDES ICCs FOR MOULTON
+. ***********************************************
+> ********************************
+. 
+. qui sum `count'
+ 42.         local mbar=r(mean)
+ 43.         local varm=r(Var)
+ 44.         local N=r(sum)
+ 45.         local k=r(N)    
+ 46. 
+.         drop _all
+ 47.         use "`bigset'"
+ 48.         
+. ***********************************************
+> *********************************
+. * STEP 2) CALCULATE THE ICC OF RESID AND CLUSTE
+> R VAR (rho_e)
+. ***********************************************
+> *********************************
+. 
+. * SUM RESIDUALS WITHIN CLUSTERS
+. tempfile sigma1
+ 49. collapse (sum) `res' [`wt'], by(`sorter') fa
+> st
+ 50.         g `sum_j'=`res'
+ 51.         drop `res'
+ 52.         
+. sort `sorter'
+ 53. save "`sigma1'"
+ 54. use "`bigset'"
+ 55. 
+. sort `sorter'
+ 56. 
+. merge `sorter' using "`sigma1'"
+ 57.         drop _merge
+ 58. 
+. * DOUBLE SUM W/IN GROUP, i~=k
+. 
+. g `sum_k'= `res'* (`sum_j'-`res')
+ 59. 
+. save "`bigset'", replace
+ 60. 
+. collapse (sum) `sum_k' `count' [`wt'], by(`sort
+> er') fast
+ 61.         rename `sum_k' `sum_jk'
+ 62.         g `test'=`count'*(`count'-1)
+ 63.         qui sum `test'
+ 64.                 local denom=r(sum) /* THIS I
+> S THE DENOM OF MOULTON (1986) EQ 1 */
+ 65.         qui sum `sum_jk'
+ 66.                 local num=r(sum) /* THIS IS 
+> THE DOUBLE SUM IN NUM, MOULTON EQ 1 */
+ 67.         drop `test' `count'
+ 68. sort `sorter'
+ 69. 
+. drop _all
+ 70. use "`bigset'"
+ 71. 
+. global rho_e=`num'/(`var_v'*`denom')
+ 72. 
+. ***********************************************
+> *************
+. * STEP 3) CALCULATE THE ICC OF Xs AND CLUSTER V
+> AR (rho_x)
+. ***********************************************
+> *************
+.         drop `res2' `sum_j' `sum_k' `res'
+ 73.         local i=2
+ 74.         while `i'<=`kr' {
+ 75.                 tempvar res`i' res`i'2 sum_j
+> `i' sum_k`i' sum_jk`i' 
+ 76.                 local ++i
+ 77.                 }
+ 78. if "`2sls'"=="" tokenize `anything'
+ 79. 
+. else {         /*FIRST HAVE TO GET FIRST STAGE 
+> PREDICTED X VALUES, THEN DO AS BEFORE*/
+ 80.         tokenize "`endog'"
+ 81.         local f=1
+ 82.         local i=1
+ 83.         local anything2=""
+ 84.         while "``i''"~="" {
+ 85.                 tempvar ``i''
+ 86.                 reg ``i'' `exog'
+ 87.                 predict ```i''', xb
+ 88.                 local anything2= "`anything2
+> ' ```i'''"
+ 89.                 local ++i
+ 90.                 local ++f
+ 91.                 }               
+ 92.         local anything2= "`depn' `anything2'
+>  `exog'" /*EXOG AND FITTED*/
+ 93.         tokenize `anything2'
+ 94. }       
+ 95. 
+.                 local i=2
+ 96.                 local saving=""
+ 97.                 while `i'<=`kr' {
+ 98.                         local x1="``i''"
+ 99.                         local xvars=""
+100.                                 local j=2
+101.                                 while `j'<=`
+> kr' {
+102.                                         if `
+> i'!=`j' {
+103.                                             
+>     local xvars= "`xvars' ``j''"
+104.                                         }
+105.                                         loca
+> l ++j
+106.                                 }       
+107.                 reg `x1' `xvars' [`wt'] /*PA
+> RTIAL OUT X VARS*/
+108.                 predict `res`i'', r
+109.                 g `res`i'2'= `res`i''^2
+110.                         qui sum `res`i'2' [`
+> wt']
+111.                         local var_v`i'= r(su
+> m)/(r(N)-`kr'-1)
+112.                         drop `res`i'2'
+113.                 local saving="`saving' `res`
+> i''"
+114.                 local ++i
+115.         }
+116.         
+. * SUM RESIDUALS WITHIN CLUSTERS
+. 
+. save "`bigset'", replace
+117. 
+. tempfile sigma3
+118. 
+. collapse (sum) `saving' [`wt'], by(`sorter') fa
+> st
+119.                 local i=2
+120.                 while `i'<=`kr' {
+121.                         rename `res`i'' `sum
+> _j`i''
+122.                 local ++i
+123.                 }
+124.         sort `sorter'
+125. 
+. save "`sigma3'"
+126. use "`bigset'"
+127. 
+. sort `sorter'
+128. merge `sorter' using "`sigma3'"
+129.         drop _merge
+130. 
+. * DOUBLE SUM W/IN GROUP, i~=k
+. local saving=""
+131. local i=2
+132.         while `i'<=`kr' {       
+133.         g `sum_k`i''= `res`i''* (`sum_j`i''-
+> `res`i'')
+134.         local saving="`saving' `sum_k`i''"
+135.         local ++i
+136.         }
+137. 
+. tempfile sigma4
+138. 
+. collapse (sum) `saving' `count' [`wt'], by(`sor
+> ter') fast
+139.         local i=2
+140.         while `i'<=`kr' {
+141.                 rename `sum_k`i'' `sum_jk`i'
+> '
+142.                 local ++i
+143.         }
+144. 
+.         g `test'=`count'*(`count'-1)
+145.         qui sum `test'
+146.                 local denom=r(sum) /* THIS I
+> S THE DENOM OF MOULTON (1986) EQ 1 */
+147. 
+.         local i=2
+148.         while `i'<=`kr' {
+149.                 qui sum `sum_jk`i''
+150.                         local num`i'=r(sum) 
+> /* THIS IS THE DOUBLE SUM IN NUM, MOULTON EQ 1 
+> */
+151.                 local ++i
+152.         }
+153. 
+.         drop `test' `count'
+154.         drop _all
+155.         
+. use "`bigset'"
+156. mat se= J(`kr',1,.)
+157.         local i=2
+158.         while `i'<=`kr' {
+159.                 global rho_x`i'=`num`i''/(`v
+> ar_v`i''*`denom')
+160.                 global moulton`i'=(1+(`varm'
+> /`mbar'+`mbar'-1)*$rho_e*(`num`i''/(`var_v`i''*
+> `denom')))^.5
+161.                 mat se[`i'-1,1]= ((var[`i'-1
+> ,`i'-1])^.5)*(1+(`varm'/`mbar'+`mbar'-1)*$rho_e
+> *(`num`i''/(`var_v`i''*`denom')))^.5
+162.                 mat var[`i'-1,`i'-1]=var[`i'
+> -1,`i'-1]*(1+(`varm'/`mbar'+`mbar'-1)*$rho_e*(`
+> num`i''/(`var_v`i''*`denom')))
+163. 
+.         local ++i
+164.         }
+165.         local ct=`kr'+1
+166.         global moulton`ct'=(1+(`varm'/`mbar'
+> +`mbar'-1)*$rho_e*1)^.5
+167.         mat var[`kr',`kr']=var[`kr',`kr']*(1
+> +(`varm'/`mbar'+`mbar'-1)*$rho_e*1)
+168. }
+169. 
+.         if "`2sls'"=="" {
+170.                 #delimit ;
+delimiter now ;
+.                 di _n in gr
+>         "OLS Regression: standard errors " _col
+> (55)
+>         "Number of obs  =" in yel %8.0f `S_E_no
+> bs' _n
+>         in gr "adjusted for cluster effects usi
+> ng Moulton"
+>         _col(55) in gr "R-squared      ="
+>         in yel %8.4f `S_E_r2' _n
+>         _col(55) in gr "Adj R-squared  ="
+>         in yel %8.4f `S_E_ar2' _n
+>         _col(55) in gr "Root MSE       ="
+>         in yel %8.0g `S_E_rmse' _n `addline'  ;
+171.         #delimit cr
+delimiter now cr
+.                 }
+172.                 else {
+173.                 #delimit ;
+delimiter now ;
+.                 di _n in gr
+>         "2SLS Regression: standard errors " _co
+> l(55)
+>         "Number of obs  =" in yel %8.0f `S_E_no
+> bs' _n
+>         in gr "adjusted for cluster effects usi
+> ng Moulton"
+>         _col(55) in gr "R-squared      ="
+>         in yel %8.4f `S_E_r2' _n
+>         _col(55) in gr "Adj R-squared  ="
+>         in yel %8.4f `S_E_ar2' _n
+>         _col(55) in gr "Root MSE       ="
+>         in yel %8.0g `S_E_rmse' _n `addline'  ;
+174.         #delimit cr
+delimiter now cr
+.                 }
+175.        ereturn post coeff var, esample(`tous
+> e') depname(`depn') dof(`S_E_df') obs(`S_E_nobs
+> ')
+176.            ereturn display
+177. 
+.           ereturn local clustvar "`cluvar'"
+178.           ereturn local cmd "moulton"
+179.           
+. 
+. end
+
+. 
+end of do-file
+
+. 
+. use final4
+file final4.dta not found
+r(601);
+
+end of do-file
+
+r(601);
+
+. do "/var/folders/k2/qn3y2r993wddd439sb4sghxc000
+> 0gn/T//SD13662.000000"
+
+. cap log close
