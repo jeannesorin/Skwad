@@ -10,8 +10,8 @@ data = as_tibble(read.dta("final5.dta"))%>%
          enroll_cat = cut(c_size, breaks = seq(from = 0, to = 250, by = 20))
   )
 
-subsample = filter(data, c_size>=20 & c_size<=60) %>%
-  mutate(small_class = c_size>40)
+subsample = filter(data, c_size>20 & c_size<60) %>%
+  mutate(large_class = c_size<=40)
 
 # ASIDE ON CLUSTERED STANDARD ERRORS -------------------------------------------
 # Three ways to get clustered standard errors
@@ -53,7 +53,7 @@ stargazer(simple_ols,title = "OLS with controls",
 summary(contr_ols)
 
 # 2. OLS RDD -------------------------------------------------------------------
-lin_rdd_subs <- lm(avgmath ~ c_size + small_class +tipuach, data = subsample )
+lin_rdd_subs <- lm(avgmath ~ c_size + large_class +tipuach, data = subsample )
 lin_se <- cluster.vcov(lin_rdd_subs, subsample$schlcode)
 stargazer(simple_ols,title = "OLS with controls",
           se = contr_se, digits = 3, header = F,  out = "tables/lin_rdd.tex")
@@ -86,7 +86,7 @@ b_se_nocon <- sqrt(var(est_nocon))
 
 # 4. Fuzzy RDD -----------------------------------------------------------------
 # Clustering at school level
-fuzzy_rd <- felm(avgmath ~c_size + tipuach|0|(classize~small_class)|schlcode,
+fuzzy_rd <- felm(avgmath ~c_size + tipuach|0|(classize~large_class)|schlcode,
                  data = subsample)
 stargazer(fuzzy_rd, title = "Fuzzy RD", digits = 3, header = F,
           out = "tables/fuzzy_rd.tex")
@@ -99,8 +99,9 @@ summary(iv_rd)
 
 # 5. rdrobust ------------------------------------------------------------------
 robust_fuzzy <- rdrobust(y = subsample$avgmath, x = subsample$c_size, c = 40, 
-                         fuzzy = subsample$classize, 
-                         cluster = subsample$schlcode)
+                         fuzzy = subsample$large_class)
+robust_sharp <- rdrobust(y = subsample$avgmath, x = subsample$c_size, c=40)
+summary(robust_sharp)
 summary(robust_fuzzy)
 
 # 6. Class Size Plot -----------------------------------------------------------
@@ -119,14 +120,16 @@ ggplot(data) +
   ggsave("figs/class_size.png", height = 8, width = 12)
 
 # 7. IV Estimates (with controls)-----------------------------------------------
-iv_con <- felm(avgmath ~c_size + tipuach|0|(classize~p_classize)|schlcode,
-     data = data)
-summary(iv_con)
+iv_nocon <- felm(avgmath~1|0|(classize~p_classize)|schlcode,
+                 data = data)
+summary(iv_nocon)
+
+
 
 # 8. IV +/- Controls -----------------------------------------------------------
-iv_nocon <- felm(avgmath~1|0|(classize~p_classize)|schlcode,
-                data = data)
-summary(iv_nocon)
+iv_con <- felm(avgmath ~c_size + tipuach|0|(classize~p_classize)|schlcode,
+               data = data)
+summary(iv_con)
 
 # Double check using ivreg
 iv_cov <- ivreg(avgmath ~ classize + tipuach + c_size|
