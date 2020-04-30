@@ -17,6 +17,7 @@
 
 ## set working directory for Mac and PC
 
+rm(list=ls())
 setwd("~/Documents/PhD/Skwad/")    
 
 ## ---------------------------
@@ -26,9 +27,30 @@ options(scipen = 6, digits = 4) # I prefer to view outputs in non-scientific not
 ## ---------------------------
 
 ## load up the packages we will need:  (uncomment as required)
-packages <- c("tidyverse", "data.table", "foreign", "stargazer", "rdd", "ggplot2", "lfe", "rdrobust")
+packages <- c("tidyverse", "data.table", "foreign", "stargazer", "rdd", "ggplot2", "lfe", "rdrobust", "ivpack")
 lapply(packages, library, character.only = TRUE)
 
+
+tolatexRDestimate <- function(output, title="title", path = "Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q3.tex"){
+  d <- data.frame(Bandwidth = output$bw,
+                  Observations = output$obs,
+                  Estimate = output$est,
+                  StdError = output$se,
+                  pvalue = output$p)
+  stargazer(d, summary=FALSE, out=path, #type="text",
+            notes="Output from RDestimate, cutpoint = 40, triangular kernel, se.type=HC1. Standard errors clustered at schlcode level")
+}
+
+tolatexrdrobust <- function(output, title="title", path = "Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q3.tex"){
+  d <- data.frame(Coefficient = output$coef,
+                  StdError = output$se,
+                  z = output$z,
+                  PValue = output$pv)
+  stargazer(d, summary=FALSE, out=path, 
+            #type="text",
+            title=title,
+            notes="Output from rdrobust, cutpoint = 40, triangular kernel, outcome var = avgmath.")
+}
 
 
 ## ---------------------------
@@ -83,6 +105,9 @@ loc_sharp1 <- RDestimate(avgmath ~ c_size , data=sub, cutpoint = 40, bw = NULL,
 summary(loc_sharp1)
 plot(loc_sharp1)
 
+tolatexRDestimate(loc_sharp1, title="Sharp RD",
+        path = "Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q3.tex")
+
 
 # Bootstrap to estimate standard errors
 S = 10000
@@ -133,12 +158,21 @@ stargazer(fuzzy_rd, title = "Fuzzy RD", digits = 3, header = F, se=list(fuzzy_rd
 #5. (*) Use -rdrobust- to estimate the effect of class size on math scores and compare your results.
 # Now use the complete sample, and define the following variable 
 # predicted class size = enrollment /(int((enrollment − 1)/40) + 1)
-
+sub$large_sign = (-1)*sub$large
 robust_fuzzy <- rdrobust(y = sub$avgmath, x = sub$c_size, c = 40, 
-                         fuzzy = sub$large)
+                         fuzzy = sub$large_sign)
 robust_sharp <- rdrobust(y = sub$avgmath, x = sub$c_size, c=40)
 summary(robust_sharp)
 summary(robust_fuzzy)
+
+
+tolatexrdrobust(robust_sharp, title="Sharp RD",
+                path = "Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q5_sharp.tex")
+tolatexrdrobust(robust_fuzzy, title="Fuzzy RD",
+                path = "Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q5_fuzzy.tex")
+
+
+
 
 data <- data %>%
   mutate(pred = c_size/(trunc((c_size-1)/40)+1)) 
