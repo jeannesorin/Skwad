@@ -443,6 +443,6 @@ stargazer(iv_quad, iv_poly,title = "Instrument Variables Estimates - Different E
 iv_placebo <- ivreg(tipuach ~ classize | pred, data=data)
 iv_rob_se <-list(sqrt(diag(vcovHC(iv_placebo, type = "HC1"))))
 stargazer(iv_placebo, se = iv_rob_se, type="text")
-stargazer(iv_model,title = "Instrument Variables Estimates", se = iv_rob_se, 
+stargazer(iv_placebo,title = "Instrument Variables Estimates", se = iv_rob_se, 
           notes=c("Standard Errors clustered at the scholcode level"),
           digits = 3, header = F,  out="Empirical Analysis III/Problem Sets/Pset4_Tables_Jeanne/q13.tex")  
