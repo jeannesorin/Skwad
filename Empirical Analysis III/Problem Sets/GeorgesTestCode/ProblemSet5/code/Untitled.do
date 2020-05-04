@@ -37,6 +37,9 @@ reg empft minwage nregs hrsopen d1 d2 d3 d4 if post == 0, nocons
 *** Part 5 ***
 di _b[d2] - _b[d4]
 
+*** Part 6 ***
+test d2 d3
+
 *** Part 7***
 mat list e(V)
 
@@ -59,6 +62,8 @@ restore
 g interact = post * state
 reg empft post state interact
 
+*** Part 14 ***
+ivreg2 empft post state interact, cluster(state post) robust
 
 *** Part 15 ***
 reg empft post state interact hrsopen nregs d1 d2 d3 d4,  nocons robust
