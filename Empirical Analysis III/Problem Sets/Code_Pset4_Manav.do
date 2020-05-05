@@ -20,7 +20,7 @@ outreg2 using parta, tex replace nocons label ctitle(Math score) dec(3)
  
 **control for percentage of disadvantaged kids and enrollement in class
 reg avgmath classize tipuach c_size, vce(cluster schlcode)
-outreg2 using parta, tex append nocons label ctitle(Math score) dec(3) 
+outreg2 using parta, tex append nocons label ctitle(Math score) dec(3)
 
 
 *****Part 2
@@ -31,6 +31,14 @@ label var large_class "Large class"
 **regress as if sharp RDD controlling for disadvantaged and enrollement
 reg avgmath large_class tipuach c_size if c_size>20 & c_size<60, vce(cluster schlcode)
 outreg2 using partb, tex replace nocons label ctitle(Math score) dec(3)
+
+**control for percentage of disadvantaged kids and enrollement in class with different trends in enrollment
+gen c_size_large = c_size*large_class
+label var c_size_large "Enrollment x Large class"
+
+reg avgmath large_class tipuach c_size c_size_large if c_size>20 & c_size<60, vce(cluster schlcode)
+outreg2 using partb, tex append nocons label ctitle(Math score) dec(3)
+
 
 
 *****Part 3
@@ -81,7 +89,7 @@ outreg2 using partd, tex replace nocons label ctitle(Math score) dec(3)
 
 ********Part 5
 rdrobust avgmath c_size if c_size>20 & c_size<60, c(40) deriv(0) scalepar(-1) 
-rdrobust avgmath c_size if c_size>20 & c_size<60, c(40) fuzzy(large_class)
+rdrobust avgmath c_size if c_size>20 & c_size<60, c(40) fuzzy(large_class) 
 
 
 *******Part 6
@@ -110,7 +118,7 @@ outreg2 using part8, tex replace nocons label ctitle(Math score) dec(3)
 
 
 *******Part 9
-twoway histogram c_size, width(1) || kdensity c_size, xline(40 80 120 160 200, lstyle(foreground)) name(hist1)
+twoway histogram c_size, width(1) || kdensity c_size, xline(40 80 120 160 200 , lstyle(foreground)) name(hist1)
 
 
 *******Part 10
@@ -129,25 +137,25 @@ twoway scatter classize c_size || scatter avgmath c_size, xline(40 80 120 160 20
 
 
 *******Part 11
-twoway scatter classize c_size || lfit classize c_size || fpfit classize c_size, xline(40 80 120 160 200 240, lstyle(foreground)) name(scatter3)
-twoway scatter avgmath c_size || lfit avgmath c_size || fpfit avgmath c_size, xline(40 80 120 160 200 240, lstyle(foreground)) name(scatter4)
+twoway scatter classize c_size || lfit classize c_size || qfit classize c_size, xline(40 80 120 160 200 240, lstyle(foreground)) name(scatter3)
+twoway scatter avgmath c_size || lfit avgmath c_size || qfit avgmath c_size, xline(40 80 120 160 200 240, lstyle(foreground)) name(scatter4)
 
 
 *******Part 12
 use `data', clear
 *Part (i) checking sensitivity to bandwith
 *bandwith 3, 5, 7, 9
-forvalues j = 3(2)9{
+forvalues j = 2(2)8{
 	gen bw`j'_id = 0
 	forvalues k = 1(1)6{
-		replace bw`j'_id = 1 if 20*(`k')-`j'<=c_size & 20*(`k')+`j'>=c_size
+		replace bw`j'_id = 1 if 40*(`k')-`j'<=c_size & 40*(`k')+`j'+1>c_size
 	}
 }
 	
-ivregress 2sls avgmath (classize = fsc) if bw3_id == 1, vce(cluster schlcode)
-outreg2 using part12, tex replace nocons label ctitle(Math Score (bw=3)) dec(3)
+ivregress 2sls avgmath (classize = fsc) if bw2_id == 1, vce(cluster schlcode)
+outreg2 using part12, tex replace nocons label ctitle(Math Score (bw=2)) dec(3)
 
-forvalues j = 5(2)9{
+forvalues j = 4(2)8{
 	ivregress 2sls avgmath (classize = fsc) if bw`j'_id == 1, vce(cluster schlcode)
 	outreg2 using part12, tex append nocons label ctitle(Math Score (bw=`j')) dec(3)
 }

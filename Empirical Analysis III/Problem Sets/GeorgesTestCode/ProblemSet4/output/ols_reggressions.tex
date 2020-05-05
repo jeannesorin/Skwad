@@ -1,0 +1,29 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+                    &\multicolumn{1}{c}{Mean math score}&\multicolumn{1}{c}{Class size}&\multicolumn{1}{c}{Mean math score}\\
+\hline
+Class size          &       0.324\sym{***}&                     &       0.251\sym{***}\\
+                    &    (0.0330)         &                     &    (0.0724)         \\
+[1em]
+Percent disadvantaged&                     &     -0.0737\sym{***}&      -0.330\sym{***}\\
+                    &                     &   (0.00901)         &    (0.0195)         \\
+[1em]
+Enrollment          &                     &      0.0951\sym{***}&      -0.183\sym{***}\\
+                    &                     &   (0.00311)         &    (0.0614)         \\
+[1em]
+largeclass          &                     &                     &      -5.695\sym{***}\\
+                    &                     &                     &     (1.506)         \\
+[1em]
+Constant            &       57.61\sym{***}&       23.59\sym{***}&       74.73\sym{***}\\
+                    &     (1.013)         &     (0.331)         &     (2.882)         \\
+\hline
+Observations        &        2024         &        2029         &         699         \\
+\(R^{2}\)           &       0.045         &       0.400         &       0.325         \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{4}{l}{\footnotesize \sym{*} \(p<0.10\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)}\\
+\end{tabular}
+}

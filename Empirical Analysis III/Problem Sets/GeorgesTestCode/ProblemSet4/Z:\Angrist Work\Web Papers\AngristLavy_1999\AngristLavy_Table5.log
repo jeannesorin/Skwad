@@ -1,0 +1,623 @@
+------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/georgevojta/Dropbox/Uchicago Notes/Year1/Magne/ProblemSets/ProblemSet4
+> /Z:\Angrist Work\Web Papers\AngristLavy_1999\AngristLavy_Table5.log
+  log type:  text
+ opened on:  28 Apr 2020, 18:31:23
+
+. 
+. *******************************************************
+. * PROGRAM: AngristLavy_Table5
+. * PROGRAMMER: Simone Schaner (sschaner@mit.edu)
+. * PURPOSE: Recreates Table 5 of Angrist and Lavy (1999)
+. *       including Moulton ses
+. * DATE CREATED: 8/13/07
+. *******************************************************
+. clear
+
+. set mem 50m
+set memory ignored.
+    Memory no longer needs to be set in modern Statas; memory adjustments are performed
+    on the fly automatically.
+
+. set more off
+
+. 
+. cd "/Users/georgevojta/Dropbox/Uchicago Notes/Year1/Magne/ProblemSets/ProblemSet4"
+/Users/georgevojta/Dropbox/Uchicago Notes/Year1/Magne/ProblemSets/ProblemSet4
+
+. 
+. * YOU MUST INCLUDE THIS DO FILE TO IMPLEMENT THE OLS MOULTONS
+. do "$input/mmoulton_post.do"
+
+. ****************************************************************
+. * PROGRAM: MMoulton
+. * PROGRAMMER: Simone Schaner (sschaner@mit.edu)
+. * PURPOSE: This creates a program
+. *       that adjusts regression standard errors
+. *       for clustering using the method in 
+. *       Moulton (1986)
+. * DATE CREATED: 8/10/07
+. * NOTE1: you can save this as an ado file as well
+. * NOTE2: This program remains a work in progress. If 
+. *       you find mistakes or find ways to improve the
+. *       efficiency, email me at sschaner@mit.edu to
+. *       let me know.
+. ******************************************************************
+. 
+. * SYNTAX: 
+.         * OLS: mmoulton depvar inddepvars [if] [in] [weight], cluvar(clustervar)
+.         * 2SLS: mmoulton depvar (enog=inst) exog [if] [in] [weight], cluvar(clustervar) 
+> 2sls
+.         
+. cap prog drop mmoulton
+
+. program define mmoulton, eclass
+  1. 
+. syntax anything [if] [in] [aw fw iw pw], [2sls] CLuvar(string)
+  2. 
+. preserve
+  3. marksample touse
+  4. qui {
+  5. 
+. if "`weight'"=="" local wt=""   
+  6. else local wt="`weight'=`exp'"
+  7. 
+. tempvar res2 sum_j sum_k sum_jk test res kr sorter
+  8. tempfile bigset
+  9. 
+. g `sorter'=`cluvar'
+ 10. sort `sorter'
+ 11. 
+.         keep if `touse'
+ 12. 
+.         tempvar count res2 sum_j sum_k sum_jk test res kr2
+ 13.         g byte `count'=1
+ 14. 
+.         /* ICC FOR RESIDUAL */
+.         if "`2sls'"=="" {
+ 15.                 reg `anything' [`wt']   
+ 16.                 }
+ 17.         else {
+ 18.                 ivreg `anything' [`wt']
+ 19.                 local exog=e(insts)
+ 20.                 local endog=e(instd)
+ 21.                 }
+ 22.                 
+. local depn=e(depvar)
+ 23. local S_E_df=e(df_m)
+ 24. local S_E_nobs=e(N)
+ 25. local S_E_r2=e(r2)
+ 26. local S_E_ar2=e(r2_a)
+ 27. local S_E_rmse=e(rmse)
+ 28. 
+. predict `res', res
+ 29.         sum `res'
+ 30. keep if e(sample)
+ 31. 
+. 
+. local kr=e(df_m)+1              
+ 32. scalar r2=e(r2)
+ 33. scalar rmse=e(rmse)
+ 34. 
+. g `res2'=`res'^2
+ 35.  sum `res2' [`wt']
+ 36. local var_v=r(sum)/(r(N)-`kr') /*S-SQUARED*/
+ 37. 
+.         mat coeff=e(b)
+ 38.         mat var=e(V)
+ 39. 
+. save "`bigset'"
+ 40. 
+. collapse (sum) `count' [`wt'], by(`sorter') fast
+ 41. *******************************************************************************
+. * STEP 1) GET ALL INFO BESIDES ICCs FOR MOULTON
+. *******************************************************************************
+. 
+. qui sum `count'
+ 42.         local mbar=r(mean)
+ 43.         local varm=r(Var)
+ 44.         local N=r(sum)
+ 45.         local k=r(N)    
+ 46. 
+.         drop _all
+ 47.         use "`bigset'"
+ 48.         
+. ********************************************************************************
+. * STEP 2) CALCULATE THE ICC OF RESID AND CLUSTER VAR (rho_e)
+. ********************************************************************************
+. 
+. * SUM RESIDUALS WITHIN CLUSTERS
+. tempfile sigma1
+ 49. collapse (sum) `res' [`wt'], by(`sorter') fast
+ 50.         g `sum_j'=`res'
+ 51.         drop `res'
+ 52.         
+. sort `sorter'
+ 53. save "`sigma1'"
+ 54. use "`bigset'"
+ 55. 
+. sort `sorter'
+ 56. 
+. merge `sorter' using "`sigma1'"
+ 57.         drop _merge
+ 58. 
+. * DOUBLE SUM W/IN GROUP, i~=k
+. 
+. g `sum_k'= `res'* (`sum_j'-`res')
+ 59. 
+. save "`bigset'", replace
+ 60. 
+. collapse (sum) `sum_k' `count' [`wt'], by(`sorter') fast
+ 61.         rename `sum_k' `sum_jk'
+ 62.         g `test'=`count'*(`count'-1)
+ 63.         qui sum `test'
+ 64.                 local denom=r(sum) /* THIS IS THE DENOM OF MOULTON (1986) EQ 1 */
+ 65.         qui sum `sum_jk'
+ 66.                 local num=r(sum) /* THIS IS THE DOUBLE SUM IN NUM, MOULTON EQ 1 */
+ 67.         drop `test' `count'
+ 68. sort `sorter'
+ 69. 
+. drop _all
+ 70. use "`bigset'"
+ 71. 
+. global rho_e=`num'/(`var_v'*`denom')
+ 72. 
+. ************************************************************
+. * STEP 3) CALCULATE THE ICC OF Xs AND CLUSTER VAR (rho_x)
+. ************************************************************
+.         drop `res2' `sum_j' `sum_k' `res'
+ 73.         local i=2
+ 74.         while `i'<=`kr' {
+ 75.                 tempvar res`i' res`i'2 sum_j`i' sum_k`i' sum_jk`i' 
+ 76.                 local ++i
+ 77.                 }
+ 78. if "`2sls'"=="" tokenize `anything'
+ 79. 
+. else {         /*FIRST HAVE TO GET FIRST STAGE PREDICTED X VALUES, THEN DO AS BEFORE*/
+ 80.         tokenize "`endog'"
+ 81.         local f=1
+ 82.         local i=1
+ 83.         local anything2=""
+ 84.         while "``i''"~="" {
+ 85.                 tempvar ``i''
+ 86.                 reg ``i'' `exog'
+ 87.                 predict ```i''', xb
+ 88.                 local anything2= "`anything2' ```i'''"
+ 89.                 local ++i
+ 90.                 local ++f
+ 91.                 }               
+ 92.         local anything2= "`depn' `anything2' `exog'" /*EXOG AND FITTED*/
+ 93.         tokenize `anything2'
+ 94. }       
+ 95. 
+.                 local i=2
+ 96.                 local saving=""
+ 97.                 while `i'<=`kr' {
+ 98.                         local x1="``i''"
+ 99.                         local xvars=""
+100.                                 local j=2
+101.                                 while `j'<=`kr' {
+102.                                         if `i'!=`j' {
+103.                                                 local xvars= "`xvars' ``j''"
+104.                                         }
+105.                                         local ++j
+106.                                 }       
+107.                 reg `x1' `xvars' [`wt'] /*PARTIAL OUT X VARS*/
+108.                 predict `res`i'', r
+109.                 g `res`i'2'= `res`i''^2
+110.                         qui sum `res`i'2' [`wt']
+111.                         local var_v`i'= r(sum)/(r(N)-`kr'-1)
+112.                         drop `res`i'2'
+113.                 local saving="`saving' `res`i''"
+114.                 local ++i
+115.         }
+116.         
+. * SUM RESIDUALS WITHIN CLUSTERS
+. 
+. save "`bigset'", replace
+117. 
+. tempfile sigma3
+118. 
+. collapse (sum) `saving' [`wt'], by(`sorter') fast
+119.                 local i=2
+120.                 while `i'<=`kr' {
+121.                         rename `res`i'' `sum_j`i''
+122.                 local ++i
+123.                 }
+124.         sort `sorter'
+125. 
+. save "`sigma3'"
+126. use "`bigset'"
+127. 
+. sort `sorter'
+128. merge `sorter' using "`sigma3'"
+129.         drop _merge
+130. 
+. * DOUBLE SUM W/IN GROUP, i~=k
+. local saving=""
+131. local i=2
+132.         while `i'<=`kr' {       
+133.         g `sum_k`i''= `res`i''* (`sum_j`i''-`res`i'')
+134.         local saving="`saving' `sum_k`i''"
+135.         local ++i
+136.         }
+137. 
+. tempfile sigma4
+138. 
+. collapse (sum) `saving' `count' [`wt'], by(`sorter') fast
+139.         local i=2
+140.         while `i'<=`kr' {
+141.                 rename `sum_k`i'' `sum_jk`i''
+142.                 local ++i
+143.         }
+144. 
+.         g `test'=`count'*(`count'-1)
+145.         qui sum `test'
+146.                 local denom=r(sum) /* THIS IS THE DENOM OF MOULTON (1986) EQ 1 */
+147. 
+.         local i=2
+148.         while `i'<=`kr' {
+149.                 qui sum `sum_jk`i''
+150.                         local num`i'=r(sum) /* THIS IS THE DOUBLE SUM IN NUM, MOULTON
+>  EQ 1 */
+151.                 local ++i
+152.         }
+153. 
+.         drop `test' `count'
+154.         drop _all
+155.         
+. use "`bigset'"
+156. mat se= J(`kr',1,.)
+157.         local i=2
+158.         while `i'<=`kr' {
+159.                 global rho_x`i'=`num`i''/(`var_v`i''*`denom')
+160.                 global moulton`i'=(1+(`varm'/`mbar'+`mbar'-1)*$rho_e*(`num`i''/(`var_
+> v`i''*`denom')))^.5
+161.                 mat se[`i'-1,1]= ((var[`i'-1,`i'-1])^.5)*(1+(`varm'/`mbar'+`mbar'-1)*
+> $rho_e*(`num`i''/(`var_v`i''*`denom')))^.5
+162.                 mat var[`i'-1,`i'-1]=var[`i'-1,`i'-1]*(1+(`varm'/`mbar'+`mbar'-1)*$rh
+> o_e*(`num`i''/(`var_v`i''*`denom')))
+163. 
+.         local ++i
+164.         }
+165.         local ct=`kr'+1
+166.         global moulton`ct'=(1+(`varm'/`mbar'+`mbar'-1)*$rho_e*1)^.5
+167.         mat var[`kr',`kr']=var[`kr',`kr']*(1+(`varm'/`mbar'+`mbar'-1)*$rho_e*1)
+168. }
+169. 
+.         if "`2sls'"=="" {
+170.                 #delimit ;
+delimiter now ;
+.                 di _n in gr
+>         "OLS Regression: standard errors " _col(55)
+>         "Number of obs  =" in yel %8.0f `S_E_nobs' _n
+>         in gr "adjusted for cluster effects using Moulton"
+>         _col(55) in gr "R-squared      ="
+>         in yel %8.4f `S_E_r2' _n
+>         _col(55) in gr "Adj R-squared  ="
+>         in yel %8.4f `S_E_ar2' _n
+>         _col(55) in gr "Root MSE       ="
+>         in yel %8.0g `S_E_rmse' _n `addline'  ;
+171.         #delimit cr
+delimiter now cr
+.                 }
+172.                 else {
+173.                 #delimit ;
+delimiter now ;
+.                 di _n in gr
+>         "2SLS Regression: standard errors " _col(55)
+>         "Number of obs  =" in yel %8.0f `S_E_nobs' _n
+>         in gr "adjusted for cluster effects using Moulton"
+>         _col(55) in gr "R-squared      ="
+>         in yel %8.4f `S_E_r2' _n
+>         _col(55) in gr "Adj R-squared  ="
+>         in yel %8.4f `S_E_ar2' _n
+>         _col(55) in gr "Root MSE       ="
+>         in yel %8.0g `S_E_rmse' _n `addline'  ;
+174.         #delimit cr
+delimiter now cr
+.                 }
+175.        ereturn post coeff var, esample(`touse') depname(`depn') dof(`S_E_df') obs(`S_
+> E_nobs')
+176.            ereturn display
+177. 
+.           ereturn local clustvar "`cluvar'"
+178.           ereturn local cmd "moulton"
+179.           
+. 
+. end
+
+. 
+end of do-file
+
+. 
+. use "$input/final5.dta"
+
+. 
+. replace avgverb= avgverb-100 if avgverb>100
+(1 real change made)
+
+. replace avgmath= avgmath-100 if avgmath>100
+(1 real change made)
+
+. 
+. g func1= c_size/(int((c_size-1)/40)+1)
+
+. g func2= cohsize/(int(cohsize/40)+1)
+
+. 
+. replace avgverb=. if verbsize==0
+(0 real changes made)
+
+. replace passverb=. if verbsize==0
+(0 real changes made)
+
+. 
+. replace avgmath=. if mathsize==0
+(1 real change made, 1 to missing)
+
+. replace passmath=. if mathsize==0
+(1 real change made, 1 to missing)
+
+. 
+. keep if 1<classize & classize<45 & c_size>5
+(5 observations deleted)
+
+. keep if c_leom==1 & c_pik<3
+(0 observations deleted)
+
+. keep if avgverb~=.
+(5 observations deleted)
+
+. 
+. g byte disc= (c_size>=36 & c_size<=45) | (c_size>=76 & c_size<=85) | ///
+>         (c_size>=116 & c_size<=125)
+
+. 
+. g byte all=1
+
+. g c_size2= (c_size^2)/100
+
+. 
+. * GENERATE TREND
+. g trend= c_size if c_size>=0 & c_size<=40
+(1,724 missing values generated)
+
+.         replace trend= 20+(c_size/2) if c_size>=41 & c_size<=80
+(885 real changes made)
+
+.         replace trend= (100/3)+(c_size/3) if c_size>=81 & c_size<=120
+(588 real changes made)
+
+.         replace trend= (130/3)+(c_size/4) if c_size>=121 & c_size<=160
+(193 real changes made)
+
+. 
+.         
+. mmoulton avgverb (classize=func1) tipuach c_size c_size2, clu(schlcode) 2sls
+
+2SLS Regression: standard errors                      Number of obs  =    2019
+adjusted for cluster effects using Moulton            R-squared      =  0.3428
+                                                      Adj R-squared  =  0.3415
+                                                      Root MSE       = 6.23561
+
+------------------------------------------------------------------------------
+     avgverb |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2631278   .0807052    -3.26   0.031    -.4872013   -.0390543
+     tipuach |  -.3687087   .0134952   -27.32   0.000    -.4061774     -.33124
+      c_size |   .0131031   .0259282     0.51   0.640    -.0588851    .0850913
+     c_size2 |   .0041682   .0111541     0.37   0.728    -.0268005    .0351368
+       _cons |   86.12938   1.715166    50.22   0.000     81.36731    90.89144
+------------------------------------------------------------------------------
+
+. 
+. foreach dvar in avgverb avgmath {
+  2. 
+. di " "
+  3. di "OUTCOME IS `dvar'"
+  4. di "FULL SAMPLE"
+  5. di " "
+  6. mmoulton `dvar' (classize=func1) tipu, clu(schlcode) 2sls
+  7. mmoulton `dvar' (classize=func1) tipu c_size, clu(schlcode) 2sls
+  8. mmoulton `dvar' (classize=func1) tipu c_size c_size2, clu(schlcode) 2sls
+  9. mmoulton `dvar' (classize=func1) trend, clu(schlcode) 2sls
+ 10. 
+. di " "
+ 11. di "OUTCOME IS `dvar'"
+ 12. di "DISCONTINUITY SAMPLE"
+ 13. di " "
+ 14. mmoulton `dvar' (classize=func1) tipu if disc==1, clu(schlcode) 2sls
+ 15. mmoulton `dvar' (classize=func1) tipu c_size if disc==1, clu(schlcode) 2sls
+ 16. 
+. }
+ 
+OUTCOME IS avgverb
+FULL SAMPLE
+ 
+
+2SLS Regression: standard errors                      Number of obs  =    2019
+adjusted for cluster effects using Moulton            R-squared      =  0.3568
+                                                      Adj R-squared  =  0.3561
+                                                      Root MSE       = 6.16577
+
+------------------------------------------------------------------------------
+     avgverb |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1584777   .0396528    -4.00   0.057    -.3290899    .0121346
+     tipuach |  -.3714599   .0135053   -27.50   0.001    -.4295687   -.3133512
+       _cons |   84.36879   1.390528    60.67   0.000     78.38583    90.35175
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =    2019
+adjusted for cluster effects using Moulton            R-squared      =  0.3397
+                                                      Adj R-squared  =  0.3387
+                                                      Root MSE       = 6.24864
+
+------------------------------------------------------------------------------
+     avgverb |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2770197   .0660214    -4.20   0.025    -.4871292   -.0669102
+     tipuach |  -.3687071   .0135277   -27.26   0.000    -.4117583   -.3256559
+      c_size |   .0222903   .0086391     2.58   0.082    -.0052031    .0497837
+       _cons |   86.14565   1.708322    50.43   0.000     80.70901    91.58229
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =    2019
+adjusted for cluster effects using Moulton            R-squared      =  0.3428
+                                                      Adj R-squared  =  0.3415
+                                                      Root MSE       = 6.23561
+
+------------------------------------------------------------------------------
+     avgverb |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2631278   .0807052    -3.26   0.031    -.4872013   -.0390543
+     tipuach |  -.3687087   .0134952   -27.32   0.000    -.4061774     -.33124
+      c_size |   .0131031   .0259282     0.51   0.640    -.0588851    .0850913
+     c_size2 |   .0041682   .0111541     0.37   0.728    -.0268005    .0351368
+       _cons |   86.12938   1.715166    50.22   0.000     81.36731    90.89144
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =    1961
+adjusted for cluster effects using Moulton            R-squared      =       .
+                                                      Adj R-squared  =       .
+                                                      Root MSE       = 7.72033
+
+------------------------------------------------------------------------------
+     avgverb |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1898637   .1040798    -1.82   0.210    -.6376827    .2579553
+       trend |   .1369107    .031825     4.30   0.050    -.0000212    .2738426
+       _cons |   72.55187   1.826179    39.73   0.001     64.69446    80.40928
+------------------------------------------------------------------------------
+ 
+OUTCOME IS avgverb
+DISCONTINUITY SAMPLE
+ 
+
+2SLS Regression: standard errors                      Number of obs  =     471
+adjusted for cluster effects using Moulton            R-squared      =  0.3139
+                                                      Adj R-squared  =  0.3110
+                                                      Root MSE       = 6.79059
+
+------------------------------------------------------------------------------
+     avgverb |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |   -.410168   .1132663    -3.62   0.069    -.8975135    .0771775
+     tipuach |  -.4772855   .0371662   -12.84   0.006    -.6371988   -.3173722
+       _cons |      93.62   3.998443    23.41   0.002     76.41609    110.8239
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =     471
+adjusted for cluster effects using Moulton            R-squared      =  0.2401
+                                                      Adj R-squared  =  0.2352
+                                                      Root MSE       = 7.15439
+
+------------------------------------------------------------------------------
+     avgverb |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.5823683   .1810292    -3.22   0.049    -1.158484   -.0062526
+     tipuach |  -.4611878   .0374033   -12.33   0.001     -.580222   -.3421537
+      c_size |   .0529979   .0278568     1.90   0.153    -.0356548    .1416507
+       _cons |   94.66023   4.541472    20.84   0.000     80.20724    109.1132
+------------------------------------------------------------------------------
+ 
+OUTCOME IS avgmath
+FULL SAMPLE
+ 
+
+2SLS Regression: standard errors                      Number of obs  =    2018
+adjusted for cluster effects using Moulton            R-squared      =  0.2448
+                                                      Adj R-squared  =  0.2441
+                                                      Root MSE       = 8.34495
+
+------------------------------------------------------------------------------
+     avgmath |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0130465    .055821    -0.23   0.837     -.253225     .227132
+     tipuach |  -.3546427   .0189122   -18.75   0.003    -.4360156   -.2732699
+       _cons |    72.6866   1.978096    36.75   0.001     64.17554    81.19766
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =    2018
+adjusted for cluster effects using Moulton            R-squared      =  0.2336
+                                                      Adj R-squared  =  0.2325
+                                                      Root MSE       = 8.40874
+
+------------------------------------------------------------------------------
+     avgmath |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2311484   .0924187    -2.50   0.088    -.5252659    .0629692
+     tipuach |  -.3495862   .0188179   -18.58   0.000     -.409473   -.2896994
+      c_size |    .041006   .0122553     3.35   0.044     .0020041    .0800079
+       _cons |   75.95636   2.412664    31.48   0.000     68.27818    83.63453
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =    2018
+adjusted for cluster effects using Moulton            R-squared      =  0.2292
+                                                      Adj R-squared  =  0.2277
+                                                      Root MSE       = 8.43497
+
+------------------------------------------------------------------------------
+     avgmath |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2644218   .1132906    -2.33   0.080    -.5789669    .0501233
+     tipuach |  -.3495658   .0188628   -18.53   0.000    -.4019375   -.2971942
+      c_size |   .0630518    .036689     1.72   0.161    -.0388133    .1649168
+     c_size2 |  -.0100023    .015943    -0.63   0.564    -.0542672    .0342627
+       _cons |   75.99324   2.433222    31.23   0.000     69.23754    82.74895
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =    1960
+adjusted for cluster effects using Moulton            R-squared      =  0.0260
+                                                      Adj R-squared  =  0.0250
+                                                      Root MSE       = 9.49951
+
+------------------------------------------------------------------------------
+     avgmath |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2053301   .1310188    -1.57   0.258    -.7690586    .3583983
+       trend |   .1939779   .0401004     4.84   0.040     .0214399     .366516
+       _cons |   62.79047   2.311628    27.16   0.001     52.84434    72.73661
+------------------------------------------------------------------------------
+ 
+OUTCOME IS avgmath
+DISCONTINUITY SAMPLE
+ 
+
+2SLS Regression: standard errors                      Number of obs  =     471
+adjusted for cluster effects using Moulton            R-squared      =  0.2615
+                                                      Adj R-squared  =  0.2583
+                                                      Root MSE       = 8.78698
+
+------------------------------------------------------------------------------
+     avgmath |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1854642   .1508916    -1.23   0.344    -.8346983    .4637698
+     tipuach |   -.458861   .0493524    -9.30   0.011    -.6712071   -.2465149
+       _cons |   78.98461   5.345245    14.78   0.005     55.98588    101.9833
+------------------------------------------------------------------------------
+
+2SLS Regression: standard errors                      Number of obs  =     471
+adjusted for cluster effects using Moulton            R-squared      =  0.2093
+                                                      Adj R-squared  =  0.2043
+                                                      Root MSE       =  9.1015
+
+------------------------------------------------------------------------------
+     avgmath |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |  -.4434526   .2357081    -1.88   0.156    -1.193581    .3066757
+     tipuach |  -.4347436   .0486298    -8.94   0.003    -.5895053    -.279982
+      c_size |   .0794009   .0363156     2.19   0.117    -.0361714    .1949732
+       _cons |   80.54307    5.93757    13.56   0.001     61.64707    99.43907
+------------------------------------------------------------------------------
+
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/georgevojta/Dropbox/Uchicago Notes/Year1/Magne/ProblemSets/ProblemSet4
+> /Z:\Angrist Work\Web Papers\AngristLavy_1999\AngristLavy_Table5.log
+  log type:  text
+ closed on:  28 Apr 2020, 18:31:26
+------------------------------------------------------------------------------------------

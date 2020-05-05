@@ -1,0 +1,10 @@
+		(1)
+VARIABLES	LABELS	Percent of disadvantaged pupils
+		
+classize	Class size	-0.851***
+		(0.090)
+		
+Observations		2,029
+R-squared		0.118
+Robust standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		

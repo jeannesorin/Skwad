@@ -1,0 +1,168 @@
+## ---------------------------
+##
+## Script name: Problem Set 5
+##
+## Purpose of script: 
+##
+## Author: Chase Abram, Tom Hierons, Jeanne Sorin
+##
+## Date Created: 2020-05-01
+##
+## ---------------------------
+##
+## Notes:
+##   
+##
+## ---------------------------
+
+## set working directory for Mac and PC
+rm(list=ls())
+setwd("~/Documents/PhD/Skwad/Empirical Analysis III/Problem Sets/")    
+
+## ---------------------------
+
+options(scipen = 6, digits = 4) # I prefer to view outputs in non-scientific notation
+
+## ---------------------------
+
+## load up the packages we will need:  (uncomment as required)
+
+packages <- c("tidyverse", "data.table", "foreign", "stargazer", "rdd", "ggplot2", "lfe", "rdrobust", "ivpack")
+lapply(packages, library, character.only = TRUE)
+
+
+## ---------------------------
+
+## load up data
+data <- read.dta("PS5.dta")
+
+## ---------------------------
+
+
+
+## ----- 
+# 1. Describe the data
+stargazer(data, digits=2, out="Pset5_ChaseTomJeanne/table_q1.tex")
+
+
+## ----- 
+# 2. Estimate the regression on the sample of fast food restaurants in Feb-Mar 1992
+q2 <- felm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + d2 + d3 + d4)
+stargazer(q2, out="Pset5_ChaseTomJeanne/table_q2.tex")
+
+
+## ------
+# 3. Interpret gamma, the coefficient in front of min-wage (TODO) & calculate a 90\% confidence interval
+# CI = gamma +/- t_{0.9} se/((N)^0.5)
+# t_{0.9} = 1.64
+CI_gamma = cbind(CIlower = q2$coefficients[2] - 1.64 * q2$se[2] / (q2$N)^0.5, 
+                 CIupper = q2$coefficients[2] + 1.64 * q2$se[2] / (q2$N)^0.5)
+CI_gamma
+
+
+## -----
+# 4. Use the sum of squares table from the regression output to calculate the R^2 and the standard error of the regression
+pre = data[data$post==0,] #restrict to Feb-March data --> actually use q2$response instead, as not all obs were used in the regression because NA
+ybar = mean(q2$response) # on
+SStot = sum((q2$response - ybar)^2)
+SSres = sum(q2$residuals^2)
+R2 = 1 - SSres / SStot
+R2
+
+RMSE = (mean((q2$fitted.values - q2$response)^2))^0.5
+RMSE
+
+
+## -----
+# 5. Give an economic interpretation of the coef nu2 - nu4. What might explain the relatively large coeff on d4?
+
+
+
+## -----
+# 6. Test : nu2 = nu3 = 0 (Not sure really what else they're asking for. Manually?)
+
+#linearHypothesis(q2, c("d2=d3", "d3=0"))
+linearHypothesis(q2, c("d2=0", "d3=0"))
+
+
+
+## -----
+# 7. Test the hypothesis H0 : nu2 = nu3 using the estimated covariance matrix of the coefficients. 
+# Verify your answer by performing a F-test
+
+# nu2 = nu3 --> nu2 - nu3 = 0
+# var(nu2 - nu3) = var(nu2) + var(nu3) - 2 cov(nu2, nu3)
+# t = [nu2 - nu3] / [se(nu2 - nu3)]
+# Reject if t > c
+vcov_nu = vcov(q2)[5:6,5:6]
+var_dnu = vcov_nu[1,1] + vcov_nu[2,2] - 2*vcov_nu[1,2]
+t = (q2$coefficients[5] - q2$coefficients[6])/(var_dnu^0.5)
+t
+c = 1.96 # 95% - should adjust for 390 degrees of freedom?
+(t <= c) # Doesn't reject the null
+
+# check ?
+linearHypothesis(q2, c("d2 = d3"))
+
+
+
+## ----
+# Now we want to control for potential selection issues by using panel structure of our data.
+# 8. See overleaf
+
+
+## ----
+# 9. See overleaf
+
+
+## ----
+# 10. Generate a table of means, a table of standard errors and a table of frequencies for -empft- in each state, each time period
+nrows = nrow(data)
+data_sum <- data %>%
+  group_by(state, post) %>%
+  summarize(mean = round(mean(empft, na.rm=T), 3),
+            se = round(sd(empft, na.rm=T), 3),
+            count = n(),
+            freq = round(count / nrows, 3))
+stargazer(data_sum, summary=FALSE, digits=3, out="Pset5_ChaseTomJeanne/table_q10.tex")
+
+
+## -----
+# 11. Using these stat, calculate a DD estimate of the impact of the min wage law on employment
+treat_before = data_sum$mean[data_sum$state==1 & data_sum$post==0]
+treat_after = data_sum$mean[data_sum$state==1 & data_sum$post==1]
+control_before = data_sum$mean[data_sum$state==0 & data_sum$post==0]
+control_after = data_sum$mean[data_sum$state==0 & data_sum$post==1]
+
+DiD11 = (treat_after - control_after) - (treat_before - control_before)
+DiD11
+
+## -----
+# 12. Specify and estimate the corresponding regression
+DiD12 <- felm(data = data, empft ~ post + state + post:state)
+stargazer(DiD12, out="Pset5_ChaseTomJeanne/table_q12.tex")
+stargazer(DiD12, type="text")
+
+
+## ----- 
+# 13. How much does this suggest that the min wage affects full employment in fast food restaurants
+
+## ----- 
+# 14. 
+# Explain why the t-test from the regression above may understate the uncertainty in the effect of min wage on full time employment?
+# How could you correct the standard errors?
+# Compare the t-values with and without this correction
+
+
+## ---- 
+# 15. What regression would you run to estimate the DD model including control variables
+# Run this regression using robust standard errors
+
+# No need to cluster se?
+q15 <- felm(data=data, empft ~ state + post + state:post + nregs + hrsopen + d2 + d3 + d4)
+stargazer(q15, se=list(q15$rse), out="Pset5_ChaseTomJeanne/table_q15.tex")
+
+
+## ---- 
+# 16 How might you test the key identifying assumptions underlying your DiD-estimation in this application? In general?
+
