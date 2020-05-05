@@ -17,7 +17,16 @@
 
 ## set working directory for Mac and PC
 rm(list=ls())
-setwd("~/Documents/PhD/Skwad/Empirical Analysis III/Problem Sets/")    
+
+# Jeanne's
+setwd("~/Documents/PhD/Skwad/Empirical Analysis III/Problem Sets/")
+
+# Chase's
+setwd("~/UChiGit/Skwad/Empirical Analysis III/Problem Sets")
+
+# Tom's
+# setwd()
+
 
 ## ---------------------------
 
