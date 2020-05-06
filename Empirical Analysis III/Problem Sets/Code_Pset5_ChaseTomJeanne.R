@@ -47,6 +47,7 @@ lapply(packages, library, character.only = TRUE)
 ## load up data
 data <- read.dta("PS5.dta")
 # See codebook (downloaded from Card's website, and in Git) for variable key
+# It's mildly helpful
 
 ## ---------------------------
 
@@ -125,8 +126,13 @@ t
 c = 1.96 # 95% - should adjust for 390 degrees of freedom?
 (t <= c) # Doesn't reject the null
 
-# check ?
+# Why does this not match the check?
+
+# check >- Yes, with one restriction, F test is chi-square
 linearHypothesis(q2, c("d2 = d3"))
+
+# There is also a way to do this with anova, but let's just look into that if
+# we don't match the other group.
 
 
 
@@ -167,6 +173,10 @@ DiD12 <- felm(data = data, empft ~ post + state + post:state)
 stargazer(DiD12, out="Pset5_ChaseTomJeanne/table_q12.tex")
 stargazer(DiD12, type="text")
 
+# Why is our estimate not matching the slides?
+# Answer: we use full-time, not all total emp. -> not including part-time peeps
+# -> Does it match the other group?
+
 
 ## ----- 
 # 13. How much does this suggest that the min wage affects full employment in fast food restaurants
@@ -177,15 +187,18 @@ stargazer(DiD12, type="text")
 # How could you correct the standard errors?
 # Compare the t-values with and without this correction
 
+# Not sure what he is getting at.
+
 
 ## ---- 
 # 15. What regression would you run to estimate the DD model including control variables
 # Run this regression using robust standard errors
 
 # No need to cluster se?
+# perhaps add clustering a la White?
 q15 <- felm(data=data, empft ~ state + post + state:post + nregs + hrsopen + d2 + d3 + d4)
 stargazer(q15, se=list(q15$rse), out="Pset5_ChaseTomJeanne/table_q15.tex")
-
+stargazer(q15, type="text")
 
 ## ---- 
 # 16 How might you test the key identifying assumptions underlying your DiD-estimation in this application? In general?
