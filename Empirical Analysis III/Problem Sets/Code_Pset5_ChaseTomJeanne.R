@@ -36,7 +36,9 @@ options(scipen = 6, digits = 4) # I prefer to view outputs in non-scientific not
 
 ## load up the packages we will need:  (uncomment as required)
 
-packages <- c("tidyverse", "data.table", "foreign", "stargazer", "rdd", "ggplot2", "lfe", "rdrobust", "ivpack")
+packages <- c("tidyverse", "data.table", "foreign", 
+              "stargazer", "rdd", "ggplot2", "lfe", 
+              "rdrobust", "ivpack", "codebook")
 lapply(packages, library, character.only = TRUE)
 
 
@@ -44,6 +46,7 @@ lapply(packages, library, character.only = TRUE)
 
 ## load up data
 data <- read.dta("PS5.dta")
+# See codebook (downloaded from Card's website, and in Git) for variable key
 
 ## ---------------------------
 
@@ -78,7 +81,16 @@ SSres = sum(q2$residuals^2)
 R2 = 1 - SSres / SStot
 R2
 
-RMSE = (mean((q2$fitted.values - q2$response)^2))^0.5
+# Why is it not this? I am prolly missing something dumb, but
+# I'm not sure why SStot is calculated as deviation from mean 
+# and not deviation from y
+ESS = sum(q2$fitted.values^2)
+TSS = sum(q2$response^2)
+R2alt = ESS/TSS
+R2alt
+
+
+RMSE = sqrt(mean((q2$fitted.values - q2$response)^2))
 RMSE
 
 
