@@ -63,7 +63,10 @@ stargazer(data, digits=2, out="Pset5_ChaseTomJeanne/table_q1.tex")
 q2 <- felm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + d2 + d3 + d4)
 stargazer(q2, out="Pset5_ChaseTomJeanne/table_q2.tex")
 
-
+# needed for anova
+q2_unres <- lm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + d2 + d3 + d4)
+q2_res <- lm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + d4)
+q2_res_eq <- lm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + I(d2 + d3) + d4)
 ## ------
 # 3. Interpret gamma, the coefficient in front of min-wage (TODO) & calculate a 90\% confidence interval
 # CI = gamma +/- t_{0.9} se/((N)^0.5)
@@ -108,8 +111,11 @@ linearHypothesis(q2, c("d2=0", "d3=0"))
 
 # heteroskedasticity robust (doesn't change answer)
 linearHypothesis(q2, c("d2=0", "d3=0"), white.adjust = "hc1")
+stargazer(ht_6)
 
-
+# anova does a proper F test -> both return the same pr. >
+ht6 <- anova(q2_res,q2_unres)
+stargazer(ht6, out="Pset5_ChaseTomJeanne/table_ht6.tex")
 
 ## -----
 # 7. Test the hypothesis H0 : nu2 = nu3 using the estimated covariance matrix of the coefficients. 
@@ -126,13 +132,14 @@ t
 c = 1.96 # 95% - should adjust for 390 degrees of freedom?
 (t <= c) # Doesn't reject the null
 
-# Why does this not match the check?
+# Why does this not match either check?
 
 # check >- Yes, with one restriction, F test is chi-square
 linearHypothesis(q2, c("d2 = d3"))
 
-# There is also a way to do this with anova, but let's just look into that if
-# we don't match the other group.
+# anova
+ht7 <- anova(q2_res_eq,q2_unres)
+stargazer(ht7, out="Pset5_ChaseTomJeanne/table_ht7.tex")
 
 
 
