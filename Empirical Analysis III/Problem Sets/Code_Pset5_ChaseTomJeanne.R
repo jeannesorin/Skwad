@@ -105,6 +105,9 @@ RMSE
 #linearHypothesis(q2, c("d2=d3", "d3=0"))
 linearHypothesis(q2, c("d2=0", "d3=0"))
 
+# heteroskedasticity robust (doesn't change answer)
+linearHypothesis(q2, c("d2=0", "d3=0"), white.adjust = "hc1")
+
 
 
 ## -----
