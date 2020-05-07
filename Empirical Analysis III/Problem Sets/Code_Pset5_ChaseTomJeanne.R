@@ -67,47 +67,44 @@ stargazer(q2, out="Pset5_ChaseTomJeanne/table_q2.tex")
 q2_unres <- lm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + d2 + d3 + d4)
 q2_res <- lm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + d4)
 q2_res_eq <- lm(data=data[data$post==0,], empft ~ minwage + nregs + hrsopen + I(d2 + d3) + d4)
+
+
+
 ## ------
 # 3. Interpret gamma, the coefficient in front of min-wage (TODO) & calculate a 90\% confidence interval
 # CI = gamma +/- t_{0.9} se/((N)^0.5)
 # t_{0.9} = 1.64
-CI_gamma = cbind(CIlower = q2$coefficients[2] - 1.64 * q2$se[2] / (q2$N)^0.5, 
-                 CIupper = q2$coefficients[2] + 1.64 * q2$se[2] / (q2$N)^0.5)
-CI_gamma
+confint(q2, level=0.90)
 
-# Not sure why, but I think this is wrong, as it does not match other group's result
-# from canned Stata output. Perhaps use lm just so we can get R to comput CI?
+# CI_gamma = cbind(CIlower = q2$coefficients[2] - 1.96 * q2$se[2] / (q2$N)^0.5, 
+#                  CIupper = q2$coefficients[2] + 1.96 * q2$se[2] / (q2$N)^0.5)
+# CI_gamma
 
 ## -----
 # 4. Use the sum of squares table from the regression output to calculate the R^2 and the standard error of the regression
+
+# CENTERED R2
 pre = data[data$post==0,] #restrict to Feb-March data --> actually use q2$response instead, as not all obs were used in the regression because NA
 ybar = mean(q2$response) # on
 SStot = sum((q2$response - ybar)^2)
 SSres = sum(q2$residuals^2)
 R2 = 1 - SSres / SStot
 R2
+# Alternatively:
+# ESS = sum((q2$fitted.values- mean(q2$fitted.values))^2)
+# TSS = sum((q2$response - mean(q2$response))^2)
+# R2altc = ESS/TSS
+# R2altc
 
-# Above matches other group.
+# FOR BONUS: Uncentered R2
+# ESS = sum(q2$fitted.values^2)
+# TSS = sum(q2$response^2)
+# R2altu = ESS/TSS
+# R2altu
 
-# I think above is centered and below is uncentered? Wonder
-# which one he wants? Def. check the calc either way.
-
-# My approach is from p. 74 of Econometric
-# Theory and Methods - Davidson & MacKinnon
-# Uncentered
-ESS = sum(q2$fitted.values^2)
-TSS = sum(q2$response^2)
-R2altu = ESS/TSS
-R2altu
-
-# Centered -> Matches other group's Stata output
-ESS = sum((q2$fitted.values- mean(q2$fitted.values))^2)
-TSS = sum((q2$response - mean(q2$response))^2)
-R2altc = ESS/TSS
-R2altc
-
-RMSE = sqrt(mean((q2$fitted.values - q2$response)^2))
+RMSE = sqrt(sum((q2$c.fitted.values - q2$response)^2 / q2$df))
 RMSE
+stargazer(q2, type="text")
 
 
 ## -----
@@ -194,7 +191,6 @@ stargazer(DiD12, type="text")
 
 # Why is our estimate not matching the slides?
 # Answer: we use full-time, not all total emp. -> not including part-time peeps
-# -> Does it match the other group?
 
 
 ## ----- 
@@ -206,7 +202,10 @@ stargazer(DiD12, type="text")
 # How could you correct the standard errors?
 # Compare the t-values with and without this correction
 
-# Not sure what he is getting at.
+# robust standard errors
+DiD14 <- felm(data = data, empft ~ post + state + post:state)
+stargazer(DiD14, se = list(DiD14$rse), out="Pset5_ChaseTomJeanne/table_q14.tex")
+stargazer(DiD14, se = list(DiD14$rse), type="text")
 
 
 ## ---- 
