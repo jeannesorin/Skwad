@@ -75,6 +75,8 @@ CI_gamma = cbind(CIlower = q2$coefficients[2] - 1.64 * q2$se[2] / (q2$N)^0.5,
                  CIupper = q2$coefficients[2] + 1.64 * q2$se[2] / (q2$N)^0.5)
 CI_gamma
 
+# Not sure why, but I think this is wrong, as it does not match other group's result
+# from canned Stata output. Perhaps use lm just so we can get R to comput CI?
 
 ## -----
 # 4. Use the sum of squares table from the regression output to calculate the R^2 and the standard error of the regression
@@ -85,14 +87,24 @@ SSres = sum(q2$residuals^2)
 R2 = 1 - SSres / SStot
 R2
 
-# Why is it not this? I am prolly missing something dumb, but
-# I'm not sure why SStot is calculated as deviation from mean 
-# and not deviation from y
+# Above matches other group.
+
+# I think above is centered and below is uncentered? Wonder
+# which one he wants? Def. check the calc either way.
+
+# My approach is from p. 74 of Econometric
+# Theory and Methods - Davidson & MacKinnon
+# Uncentered
 ESS = sum(q2$fitted.values^2)
 TSS = sum(q2$response^2)
-R2alt = ESS/TSS
-R2alt
+R2altu = ESS/TSS
+R2altu
 
+# Centered -> Matches other group's Stata output
+ESS = sum((q2$fitted.values- mean(q2$fitted.values))^2)
+TSS = sum((q2$response - mean(q2$response))^2)
+R2altc = ESS/TSS
+R2altc
 
 RMSE = sqrt(mean((q2$fitted.values - q2$response)^2))
 RMSE
