@@ -130,25 +130,14 @@ stargazer(ht6, out="Pset5_ChaseTomJeanne/table_ht6.tex")
 # 7. Test the hypothesis H0 : nu2 = nu3 using the estimated covariance matrix of the coefficients. 
 # Verify your answer by performing a F-test
 
-# nu2 = nu3 --> nu2 - nu3 = 0
-# var(nu2 - nu3) = var(nu2) + var(nu3) - 2 cov(nu2, nu3)
-# t = [nu2 - nu3] / [se(nu2 - nu3)]
-# Reject if t > c
-vcov_nu = vcov(q2)[5:6,5:6]
-var_dnu = vcov_nu[1,1] + vcov_nu[2,2] - 2*vcov_nu[1,2]
-t = (q2$coefficients[5] - q2$coefficients[6])/(var_dnu^0.5)
-t
-c = 1.96 # 95% - should adjust for 390 degrees of freedom?
-(t <= c) # Doesn't reject the null
+# Verify manually- export full covariance table
+vcov_nu %>% stargazer(summary=FALSE, out="Pset5_ChaseTomJeanne/table_cov7.tex")
 
-# Why does this not match either check?
 
-# check >- Yes, with one restriction, F test is chi-square
-linearHypothesis(q2, c("d2 = d3"))
-
-# anova
+# Verify directly with the automated F-Test
 ht7 <- anova(q2_res_eq,q2_unres)
 stargazer(ht7, out="Pset5_ChaseTomJeanne/table_ht7.tex")
+
 
 
 
